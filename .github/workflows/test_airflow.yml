@@ -1,0 +1,32 @@
+name: Deploy DAG to EC2
+
+on:
+  push:
+    paths:
+      - 'dags/**'
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy DAGs to EC2
+        run: |
+          scp -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no -r dags/* ec2-user@${{ secrets.EC2_HOST }}:/opt/airflow/dags/
+
+      - name: Restart Airflow Scheduler
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+            docker restart airflow-scheduler
+          EOF
