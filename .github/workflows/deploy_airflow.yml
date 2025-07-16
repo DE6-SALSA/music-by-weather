@@ -1,4 +1,4 @@
-name: Deploy DAG to private EC2 via Bastion
+name: Deploy DAG to private EC2 via Bastion (debug)
 
 on:
   push:
@@ -16,22 +16,17 @@ jobs:
 
       - name: Set up SSH key
         run: |
+          set -x
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 10.0.45.211 >> ~/.ssh/known_hosts
+          ls -al ~/.ssh
 
-      - name: Copy DAGs to private EC2 via bastion
+      - name: Copy DAGs to private EC2 via bastion (debug)
         run: |
-          scp -o ProxyJump=ec2-user@${{ secrets.BASTION_HOST }} \
+          set -x
+          scp -vvv -o ProxyJump=ec2-user@${{ secrets.BASTION_HOST }} \
               -i ~/.ssh/ec2_key.pem \
               -r dags/* ec2-user@10.0.45.211:/home/ec2-user/airflow-private/dags/
-
-      - name: Restart Airflow scheduler on private EC2
-        run: |
-          ssh -o ProxyJump=ec2-user@${{ secrets.BASTION_HOST }} \
-              -i ~/.ssh/ec2_key.pem \
-              ec2-user@10.0.45.211 << 'EOF'
-              cd ~/airflow-private
-              docker compose -f docker-compose-private.yaml restart airflow-scheduler
-          EOF
