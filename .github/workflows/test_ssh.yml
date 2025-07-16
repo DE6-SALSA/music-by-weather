@@ -1,0 +1,24 @@
+name: Test SSH ProxyJump
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 10.0.45.211 >> ~/.ssh/known_hosts
+
+      - name: Test ProxyJump connection
+        run: |
+          ssh -vvv -o ProxyJump=ec2-user@${{ secrets.BASTION_HOST }} \
+              -i ~/.ssh/ec2_key.pem \
+              ec2-user@10.0.45.211 \
+              "echo ' ProxyJump SSH connection SUCCESS!'"
