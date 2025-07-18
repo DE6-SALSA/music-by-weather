@@ -118,27 +118,28 @@ def copy_to_redshift(**kwargs):
     s3_key = ti.xcom_pull(key='s3_key')
 
     col_str = ", ".join(COLUMNS)
+
+    truncate_staging_sql = "TRUNCATE TABLE raw_data.top_tag5_staging;"
+
     copy_sql = f"""
-        COPY raw_data.top_tag5 ({col_str})
+        COPY raw_data.top_tag5_staging ({col_str})
         FROM 's3://{S3_BUCKET}/{s3_key}'
         ACCESS_KEY_ID '{AWS_ACCESS_KEY_ID}'
         SECRET_ACCESS_KEY '{AWS_SECRET_ACCESS_KEY}'
         CSV IGNOREHEADER 1;
     """
-    dedup_sql = f"""
-        DELETE FROM raw_data.top_tag5
-        WHERE (artist, title) IN (
-            SELECT artist, title
-            FROM (
-                SELECT artist, title,
-                       ROW_NUMBER() OVER (PARTITION BY artist, title ORDER BY load_time DESC) AS rn
-                FROM raw_data.top_tag5
-            )
-            WHERE rn > 1
-        );
-    """
-    hook = PostgresHook(postgres_conn_id='redshift_conn')
-    hook.run(copy_sql)
-    hook.run(dedup_sql)
-    logging.info("Finished copy_to_redshift with dedup")
 
+    merge_sql = """
+        INSERT INTO raw_data.top_tag5 (artist, title, play_cnt, listener_cnt, tag1, tag2, tag3, tag4, tag5, load_time)
+        SELECT s.artist, s.title, s.play_cnt, s.listener_cnt, s.tag1, s.tag2, s.tag3, s.tag4, s.tag5, current_timestamp
+        FROM raw_data.top_tag5_staging s
+        LEFT JOIN raw_data.top_tag5 t
+        ON s.artist = t.artist AND s.title = t.title
+        WHERE t.artist IS NULL;
+    """
+
+    hook = PostgresHook(postgres_conn_id='redshift_conn')
+    hook.run(truncate_staging_sql)
+    hook.run(copy_sql)
+    hook.run(merge_sql)
+    logging.info("Finished copy_to_redshift with staging + deduplication insert")
