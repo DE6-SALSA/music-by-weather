@@ -1,7 +1,8 @@
 name: CD 테스트 워크플로우
 
 on:
-  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-cd]
 
 jobs:
   print-message:
@@ -9,4 +10,8 @@ jobs:
 
     steps:
       - name: Echo CD Trigger Test
-        run: echo "CI 이후 CD 워크플로우가 정상적으로 트리거되었습니다."
+        run: |
+          echo "✅ CI 이후 CD 워크플로우가 정상적으로 트리거되었습니다."
+          echo "Triggered by: ${{ github.event.sender.login }}"
+          echo "Ref: ${{ github.event.client_payload.ref }}"
+          echo "SHA: ${{ github.event.client_payload.sha }}"
