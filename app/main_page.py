@@ -3,24 +3,28 @@ import os
 import streamlit as st
 import pandas as pd
 import requests
+import animations
 from datetime import datetime
 from dotenv import load_dotenv
 
-# .env 파일 로드
 load_dotenv() 
 
-# 페이지 설정: 와이드 레이아웃으로 설정하여 더 넓은 화면 사용
 st.set_page_config(layout="wide")
 
 FASTAPI_BASE_URL = os.environ.get("FASTAPI_BASE_URL", "http://127.0.0.1:8000")
 
-# --- CSS 스타일 로드 함수 ---
+# 공통 CSS 오버라이드
 def load_css(file_name):
     with open(file_name, "r", encoding='utf-8') as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# CSS 파일 로드
 load_css("styles.css")
+st.markdown("""
+<style>
+    [data-testid], [class*="css-"] { background: transparent !important; }
+.stApp, body { background: transparent !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # --- Streamlit 앱의 타이틀 ---
 st.markdown("<h1>Weatherify</h1>", unsafe_allow_html=True)
@@ -160,43 +164,54 @@ with col_weather_info:
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
     current_weather_description = weather_data.get("description", "").lower() 
 
-    # 날씨 조건에 따라 배경색과 아이콘 결정
     weather_box_background_color = "#FFFFFF" # 기본 흰색
     weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1779/1779940.png" # 기본 아이콘
     weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
 
-    # 날씨 조건별 색상 및 아이콘 매핑
-    if "맑음" in current_weather_description or "Clear" in current_weather_description:
+    ani_map = {
+        "Clear" : animations.clear_html,
+        "Rainy" : animations.rainy_html,
+        "Snowy" : animations.snowy_html,
+        "Cloudy" : animations.cloudy_html,
+        "Windy" : animations.windy_html,
+        "Stormy" : animations.stormy_html,
+        "Hot" : animations.hot_html,
+        "Cold" : animations.cold_html,
+    }
+    if weather_text in ani_map:
+        st.markdown(ani_map[weather_text](), unsafe_allow_html=True)
+
+    if "Clear" in current_weather_description:
         weather_box_background_color = "#FFECB3" 
         weather_icon_image = "https://www.flaticon.com/kr/free-icons/"
         weather_text = "Clear"
         text_color_for_weather_box = "#795548" 
-    elif "비" in current_weather_description or "Rainy" in current_weather_description:
+    elif "Rainy" in current_weather_description:
         weather_box_background_color = "#263238" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/3353/3353982.png" 
         weather_text = "Rainy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "눈" in current_weather_description or "Snowy" in current_weather_description:
+    elif "Snowy" in current_weather_description:
         weather_box_background_color = "#E0F2F7"
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/2315/2315309.png" 
         weather_text = "Snowy"
         text_color_for_weather_box = "#424242" 
-    elif "흐림" in current_weather_description or "Cloudy" in current_weather_description:
+    elif "Cloudy" in current_weather_description:
         weather_box_background_color = "#CFD8DC" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1163/1163624.png"
         weather_text = "Cloudy"
         text_color_for_weather_box = "#424242" 
-    elif "번개" in current_weather_description or "Stormy" in current_weather_description:
+    elif "Stormy" in current_weather_description:
         weather_box_background_color = "#455A64" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1146/1146860.png" 
         weather_text = "Stormy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "폭염" in current_weather_description or "Hot" in current_weather_description:
+    elif "Hot" in current_weather_description:
         weather_box_background_color = "#FF7043" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1146/1146860.png" 
         weather_text = "Hot"
         text_color_for_weather_box = "#FFFFFF" 
-    elif "한파" in current_weather_description or "Cold" in current_weather_description:
+    elif "Cold" in current_weather_description:
         weather_box_background_color = "#BBDEFB" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/6120/6120300.png" 
         weather_text = "Cold"
