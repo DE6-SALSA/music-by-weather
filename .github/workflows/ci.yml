@@ -50,7 +50,7 @@ jobs:
       - name: Trigger CD workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: deploy_airflow.yml
+          workflow: cd.yml
           token: ${{ secrets.GITHUB_TOKEN }}
           repo: ${{ github.repository }}
           ref: ${{ github.ref }}
