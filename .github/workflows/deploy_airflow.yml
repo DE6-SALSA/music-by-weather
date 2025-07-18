@@ -1,4 +1,4 @@
-name: Deploy DAG to private EC2 via Bastion (debug)
+name: Deploy DAG to private EC2
 
 on:
   push:
