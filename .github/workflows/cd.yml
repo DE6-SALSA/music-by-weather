@@ -1,0 +1,12 @@
+name: CD 테스트 워크플로우
+
+on:
+  workflow_dispatch:
+
+jobs:
+  print-message:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Echo CD Trigger Test
+        run: echo "CI 이후 CD 워크플로우가 정상적으로 트리거되었습니다."
