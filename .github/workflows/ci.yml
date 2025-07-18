@@ -1,0 +1,43 @@
+name: Airflow DAG CI (Docker Compose)
+
+on:
+  push:
+    paths:
+      - 'dags/*.py'
+      - 'etl/*.py'
+    branches: [dag_cicd]
+
+jobs:
+  airflow-dag-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Start minimal Airflow environment
+        run: |
+          docker-compose -f docker-compose_git.yml up -d airflow-webserver
+          echo "Waiting for Airflow to initialize..."
+          sleep 30
+
+      - name: Test DAG parsing
+        run: |
+          docker-compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+
+      - name: Shut down Airflow containers
+        if: always()
+        run: |
+          cd .github/ci
+          docker-compose -f docker-compose_git.yml down
+
+  trigger-cd:
+    needs: airflow-dag-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call CD workflow
+        uses: peter-evans/workflow-dispatch@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          workflow: cd.yml
