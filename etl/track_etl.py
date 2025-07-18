@@ -142,4 +142,4 @@ def copy_to_redshift(**kwargs):
     hook.run(truncate_staging_sql)
     hook.run(copy_sql)
     hook.run(merge_sql)
-    logging.info("Finished copy_to_redshift with staging + deduplication insert")
+    logging.info("Finished copy_to_redshift with staging + deduplication insert!")
