@@ -1,13 +1,41 @@
 import streamlit as st
 import requests
 import pandas as pd
+import animations
 
 FASTAPI_BACKEND_URL = "http://localhost:8000"
 ITEMS_PER_PAGE = 20
 
 st.set_page_config(layout="wide", page_title="음악 차트 순위")
 
+st.markdown("""
+<style>
+    [data-testid], [class*="css-"] { background: transparent !important; }
+.stApp, body { background: transparent !important; }
+</style>
+""", unsafe_allow_html=True)
+
 def show_chart_rank_page():
+    weather_text = st.session_state.get("weather_text", None)
+    if not weather_text:
+        weather_text = "Clear" # 기본값
+    
+    anim_map = {
+        "Clear":   animations.clear_html,
+        "Rainy":   animations.rainy_html,
+        "Snowy":   animations.snowy_html,
+        "Cloudy":  animations.cloudy_html,
+        "Windy":   animations.windy_html,
+        "Stormy":  animations.stormy_html,
+        "Hot":     animations.hot_html,
+        "Cold":    animations.cold_html,
+    }
+
+    # 해당 함수 호출
+    if weather_text in anim_map:
+        st.markdown(anim_map[weather_text](), unsafe_allow_html=True)
+
+
     st.title("음악 차트 순위")
     st.markdown("---")
 
