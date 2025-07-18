@@ -24,7 +24,7 @@ jobs:
               -o StrictHostKeyChecking=no \
               -r dags/* ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_dags/
 
-      - name: From bastion, copy to private
+      - name: From bastion, copy to private ec2
         run: |
           ssh -i ~/.ssh/ec2_key.pem \
               -o StrictHostKeyChecking=no \
