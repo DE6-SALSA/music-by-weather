@@ -1,17 +1,11 @@
-name: CD 테스트 워크플로우
+name: CD Workflow
 
 on:
-  repository_dispatch:
-    types: [trigger-cd]
+  workflow_dispatch:
 
 jobs:
-  print-message:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Echo CD Trigger Test
-        run: |
-          echo "CI 이후 CD 워크플로우가 정상적으로 트리거되었습니다."
-          echo "Triggered by: ${{ github.event.sender.login }}"
-          echo "Ref: ${{ github.event.client_payload.ref }}"
-          echo "SHA: ${{ github.event.client_payload.sha }}"
+      - name: Echo CD 실행 확인
+        run: echo "CD 워크플로우가 실행되었습니다."
