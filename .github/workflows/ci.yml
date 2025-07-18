@@ -48,12 +48,11 @@ jobs:
           echo "Repository: ${{ github.repository }}"
 
       - name: Trigger CD workflow
-        uses: peter-evans/workflow-dispatch@v2
+        uses: peter-evans/workflow-dispatch@v3
         with:
-          workflow: cd.yml
           token: ${{ secrets.GITHUB_TOKEN }}
-          repo: ${{ github.repository }}
-          ref: refs/heads/dag_cicd
+          event-type: trigger-cd
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
 
       - name: Confirm dispatch step completed
         run: echo "CD dispatch attempt complete"
