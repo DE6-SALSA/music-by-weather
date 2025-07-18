@@ -80,7 +80,7 @@ def get_chart_rank_from_api():
     return st.session_state.chart_rank_data
 
 @st.cache_data(ttl=300) # 5분 캐시
-def get_weather_based_recommendations_from_api(location: str, sub_location: str):
+def get_weather_based_recommendations_from_api(location: str, sub_location: str, randomize: bool = False):
     try:
         # 명시적으로 URL 인코딩 적용
         encoded_location = urllib.parse.quote(location)
@@ -88,10 +88,12 @@ def get_weather_based_recommendations_from_api(location: str, sub_location: str)
         if sub_location:
             encoded_sub_location = urllib.parse.quote(sub_location)
         
-        # URL에 직접 인코딩된 파라미터를 포함
-        recommend_url = f"{FASTAPI_BASE_URL}/recommend/weather?location={encoded_location}"
+        # URL에 직접 인코딩된 파라미터를 포함, limit=10 추가
+        recommend_url = f"{FASTAPI_BASE_URL}/recommend/weather?location={encoded_location}&limit=10"
         if encoded_sub_location:
             recommend_url += f"&sub_location={encoded_sub_location}"
+        if randomize:
+            recommend_url += "&randomize=true"
 
         response = requests.get(recommend_url)
         response.raise_for_status()
@@ -101,10 +103,14 @@ def get_weather_based_recommendations_from_api(location: str, sub_location: str)
         return []
 
 @st.cache_data(ttl=300) # 5분 캐시
-def search_music_from_api(query: str):
+def search_music_from_api(query: str, randomize: bool = False):
     try:
         encoded_query = urllib.parse.quote(query)
-        response = requests.get(f"{FASTAPI_BASE_URL}/search/music?query={encoded_query}")
+        # limit=10 추가
+        search_url = f"{FASTAPI_BASE_URL}/search/music?query={encoded_query}&limit=10"
+        if randomize:
+            search_url += "&randomize=true"
+        response = requests.get(search_url)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -152,7 +158,7 @@ with col_weather_info:
     st.subheader("현재 날씨")
 
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
-    current_weather_description = weather_data.get("description", "")
+    current_weather_description = weather_data.get("description", "").lower() 
 
     # 날씨 조건에 따라 배경색과 아이콘 결정
     weather_box_background_color = "#FFFFFF" # 기본 흰색
@@ -160,37 +166,37 @@ with col_weather_info:
     weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
 
     # 날씨 조건별 색상 및 아이콘 매핑
-    if "Clear" in current_weather_description:
+    if "맑음" in current_weather_description or "Clear" in current_weather_description:
         weather_box_background_color = "#FFECB3" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/861/861053.png" 
-        weather_text = "Clear"
+        weather_text = "Sunny"
         text_color_for_weather_box = "#795548" 
-    elif "Rainy" in current_weather_description:
+    elif "비" in current_weather_description or "Rainy" in current_weather_description:
         weather_box_background_color = "#263238" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/3353/3353982.png" 
         weather_text = "Rainy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "Snowy" in current_weather_description:
+    elif "눈" in current_weather_description or "Snowy" in current_weather_description:
         weather_box_background_color = "#E0F2F7"
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/2315/2315309.png" 
         weather_text = "Snowy"
         text_color_for_weather_box = "#424242" 
-    elif "Cloudy" in current_weather_description:
+    elif "흐림" in current_weather_description or "Cloudy" in current_weather_description:
         weather_box_background_color = "#CFD8DC" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1163/1163624.png"
         weather_text = "Cloudy"
         text_color_for_weather_box = "#424242" 
-    elif "Stormy" in current_weather_description:
+    elif "번개" in current_weather_description or "Stormy" in current_weather_description:
         weather_box_background_color = "#455A64" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1146/1146860.png" 
         weather_text = "Stormy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "Hot" in current_weather_description:
+    elif "폭염" in current_weather_description or "Hot" in current_weather_description:
         weather_box_background_color = "#FF7043" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1210/1210419.png" 
         weather_text = "Hot"
         text_color_for_weather_box = "#FFFFFF" 
-    elif "Cold" in current_weather_description:
+    elif "한파" in current_weather_description or "Cold" in current_weather_description:
         weather_box_background_color = "#BBDEFB" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/6120/6120300.png" 
         weather_text = "Cold"
@@ -237,7 +243,7 @@ st.markdown("---")
 # --- 날씨 기반 음악 추천 섹션 ---
 # 세션 상태 초기화
 if 'refresh_key' not in st.session_state:
-    st.session_state.refresh_key = str(datetime.now())
+    st.session_state.refresh_key = 0
 
 # 제목과 버튼을 같은 줄에 표시
 col_title, col_button = st.columns([10, 1])
@@ -245,22 +251,20 @@ with col_title:
     st.subheader("현재 날씨 기반 음악 추천")
 with col_button:
     if st.button("New", key="refresh_recommendations"):
-        # 버튼 클릭 시 refresh_key 갱신
-        st.session_state.refresh_key = str(datetime.now())
+        st.session_state.refresh_key += 1
+        st.cache_data.clear()  # 캐시 무효화
+        st.rerun()  # 페이지 새로고침
 
-# 캐시 없이 API 호출
-weather_recommendations = get_weather_based_recommendations_from_api(selected_level1, selected_level2)
+# 캐시 없이 API 호출, 무작위 추천 적용
+weather_recommendations = get_weather_based_recommendations_from_api(selected_level1, selected_level2, randomize=True)
 
 if weather_recommendations:
     # 'message' 키가 있는 경우와 없는 경우를 분리하여 처리
-    # 실제 음악 추천 데이터가 담긴 리스트를 가져옵니다.
     actual_music_recs = [rec for rec in weather_recommendations if "artist" in rec]
 
     if "message" in weather_recommendations[0] and not actual_music_recs:
-        # 메시지만 있고 실제 음악 추천이 없는 경우
         st.info(weather_recommendations[0]["message"])
     elif actual_music_recs:
-        # 실제 음악 추천이 있는 경우
         # 5칸씩 2줄로 표시 (최대 10개 항목)
         for row in range(2):  # 2줄
             rec_cols = st.columns(5)  # 5칸
@@ -291,7 +295,7 @@ if weather_recommendations:
                     if rec.get("artist_url") and rec["artist_url"].strip():
                         html_content += f"""<a href='{rec['artist_url']}' target='_blank'>아티스트 페이지</a>"""
                     else:
-                        html_content += f"""<span class='link-placeholder'>아티тисти 페이지 없음</span>"""
+                        html_content += f"""<span class='link-placeholder'>아티스트 페이지 없음</span>"""
                     html_content += f"""</div>"""
 
                     # 트랙 페이지 링크
@@ -320,7 +324,7 @@ st.markdown("---")
 
 # --- 태그 검색 섹션 ---
 if 'search_refresh_key' not in st.session_state:
-    st.session_state.search_refresh_key = str(datetime.now())
+    st.session_state.search_refresh_key = 0
 
 if 'search_query' not in st.session_state:
     st.session_state.search_query = ""
@@ -330,9 +334,9 @@ with col_search_title:
     st.subheader("태그로 음악 검색")
 with col_new_button:
     if st.button("New", key="refresh_search"):
-        st.session_state.search_refresh_key = str(datetime.now())
-        # 'New' 버튼 클릭 시 검색 쿼리 초기화 (선택 사항)
-        # st.session_state.search_query = "" 
+        st.session_state.search_refresh_key += 1
+        st.cache_data.clear()  # 캐시 무효화
+        st.rerun()  # 페이지 새로고침
 
 # --- 키워드 입력창 & Search 버튼 ---
 st.session_state.search_query = st.text_input(
@@ -346,10 +350,10 @@ search_triggered = st.button("Search", key="search_button")
 # NameError 해결: search_results를 항상 초기화
 search_results = [] 
 if search_triggered and st.session_state.search_query.strip():
-    search_results = search_music_from_api(st.session_state.search_query.strip())
-elif st.session_state.search_refresh_key and st.session_state.search_query.strip():
-    # 'New' 버튼을 누르거나 새로고침 시에도 기존 검색어가 있다면 다시 검색
-    search_results = search_music_from_api(st.session_state.search_query.strip())
+    search_results = search_music_from_api(st.session_state.search_query.strip(), randomize=False)
+elif st.session_state.search_refresh_key > 0 and st.session_state.search_query.strip():
+    # 'New' 버튼을 누르면 무작위로 10개 추천
+    search_results = search_music_from_api(st.session_state.search_query.strip(), randomize=True)
 
 if search_results:
     # 'message' 키가 있는 경우와 없는 경우를 분리하여 처리
@@ -365,44 +369,44 @@ if search_results:
             for i, rec in enumerate(actual_search_recs[start_idx:end_idx]):
                 with rec_cols[i]:
                     # 모든 HTML을 하나의 변수로 구성 (날씨 추천 섹션과 동일하게)
-                        html_content = f"""
-                        <div class='music-card'>
-                            <div class='image-wrapper'>
-                                """
-                        if rec.get("image_url") and rec["image_url"].strip():
-                            html_content += f"""<img src="{rec["image_url"]}" class="music-image">"""
-                        else:
-                            html_content += f"""<div class='no-image-placeholder'>No Image</div>"""
-                        html_content += f"""
-                            </div>
-                            <div class='music-info-box'>
-                                <p class='artist-name'>**{rec['artist']}**</p>
-                                <p class='track-title'>*{rec['title']}*</p>
-                            </div>
-                            <div class='music-link-box'>
-                                """
-                        if rec.get("artist_url") and rec["artist_url"].strip():
-                            html_content += f"""<a href='{rec['artist_url']}' target='_blank'>아티스트 페이지</a>"""
-                        else:
-                            html_content += f"""<span class='link-placeholder'>아티스트 페이지 없음</span>"""
-                        html_content += f"""
-                            </div>
-                            <div class='music-link-box'>
-                                """
-                        if rec.get("track_url") and rec["track_url"].strip():
-                            html_content += f"""<a href='{rec['track_url']}' target='_blank'>트랙 페이지</a>"""
-                        else:
-                            html_content += f"""<span class='link-placeholder'>트랙 페이지 없음</span>"""
-                        html_content += f"""
-                            </div>
-                            <div class='music-tags-box'>
-                                <p class='tags-text'>
-                                    {f"`{' '.join(rec['tags'])}`" if rec.get('tags') else "`No Tags`"}
-                                </p>
-                            </div>
+                    html_content = f"""
+                    <div class='music-card'>
+                        <div class='image-wrapper'>
+                            """
+                    if rec.get("image_url") and rec["image_url"].strip():
+                        html_content += f"""<img src="{rec["image_url"]}" class="music-image">"""
+                    else:
+                        html_content += f"""<div class='no-image-placeholder'>No Image</div>"""
+                    html_content += f"""
                         </div>
-                        """
-                        st.markdown(html_content, unsafe_allow_html=True)  
+                        <div class='music-info-box'>
+                            <p class='artist-name'>**{rec['artist']}**</p>
+                            <p class='track-title'>*{rec['title']}*</p>
+                        </div>
+                        <div class='music-link-box'>
+                            """
+                    if rec.get("artist_url") and rec["artist_url"].strip():
+                        html_content += f"""<a href='{rec['artist_url']}' target='_blank'>아티스트 페이지</a>"""
+                    else:
+                        html_content += f"""<span class='link-placeholder'>아티스트 페이지 없음</span>"""
+                    html_content += f"""
+                        </div>
+                        <div class='music-link-box'>
+                            """
+                    if rec.get("track_url") and rec["track_url"].strip():
+                        html_content += f"""<a href='{rec['track_url']}' target='_blank'>트랙 페이지</a>"""
+                    else:
+                        html_content += f"""<span class='link-placeholder'>트랙 페이지 없음</span>"""
+                    html_content += f"""
+                        </div>
+                        <div class='music-tags-box'>
+                            <p class='tags-text'>
+                                {f"`{' '.join(rec['tags'])}`" if rec.get('tags') else "`No Tags`"}
+                            </p>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(html_content, unsafe_allow_html=True)  
 else:
     if search_triggered and not st.session_state.search_query.strip():
         st.warning("검색어를 입력해주세요.")
