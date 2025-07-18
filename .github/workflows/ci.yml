@@ -1,0 +1,63 @@
+name: actions step by step
+
+on:
+  push:
+    paths:
+      - 'dags/*.py'
+      - 'etl/*.py'
+    branches: [dag_cicd]
+
+jobs:
+  airflow-dag-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Start dependencies (Postgres & Redis)
+        run: docker compose -f docker-compose_git.yml up -d postgres redis
+
+      - name: Wait for DB to be ready
+        run: sleep 10
+
+      - name: Initialize Airflow DB
+        run: docker compose -f docker-compose_git.yml run airflow-webserver airflow db migrate
+
+      - name: Start Airflow Webserver
+        run: docker compose -f docker-compose_git.yml up -d airflow-webserver
+
+      - name: Wait for Airflow to initialize
+        run: sleep 30
+
+      - name: Test DAG parsing
+        run: docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+
+      - name: Shut down Airflow containers
+        if: always()
+        run: docker compose -f docker-compose_git.yml down
+
+  trigger-cd:
+    needs: airflow-dag-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print dispatch context
+        run: |
+          echo "Current ref: ${{ github.ref }}"
+          echo "Repository: ${{ github.repository }}"
+
+      - name: Trigger CD workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: cd.yml
+          ref: refs/heads/dag_cicd
+
+      - name: Confirm dispatch step completed
+        run: echo "CD dispatch attempt complete"
+
+      - name: Fail if CD dispatch failed
+        if: failure()
+        run: |
+          echo "CD workflow dispatch failed"
+          exit 1
