@@ -152,7 +152,7 @@ with col_weather_info:
     st.subheader("현재 날씨")
 
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
-    current_weather_description = weather_data.get("description", "").lower() 
+    current_weather_description = weather_data.get("description", "")
 
     # 날씨 조건에 따라 배경색과 아이콘 결정
     weather_box_background_color = "#FFFFFF" # 기본 흰색
@@ -160,37 +160,37 @@ with col_weather_info:
     weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
 
     # 날씨 조건별 색상 및 아이콘 매핑
-    if "맑음" in current_weather_description or "Clear" in current_weather_description:
+    if "Clear" in current_weather_description:
         weather_box_background_color = "#FFECB3" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/861/861053.png" 
-        weather_text = "Sunny"
+        weather_text = "Clear"
         text_color_for_weather_box = "#795548" 
-    elif "비" in current_weather_description or "Rainy" in current_weather_description:
+    elif "Rainy" in current_weather_description:
         weather_box_background_color = "#263238" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/3353/3353982.png" 
         weather_text = "Rainy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "눈" in current_weather_description or "Snowy" in current_weather_description:
+    elif "Snowy" in current_weather_description:
         weather_box_background_color = "#E0F2F7"
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/2315/2315309.png" 
         weather_text = "Snowy"
         text_color_for_weather_box = "#424242" 
-    elif "흐림" in current_weather_description or "Cloudy" in current_weather_description:
+    elif "Cloudy" in current_weather_description:
         weather_box_background_color = "#CFD8DC" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1163/1163624.png"
         weather_text = "Cloudy"
         text_color_for_weather_box = "#424242" 
-    elif "번개" in current_weather_description or "Stormy" in current_weather_description:
+    elif "Stormy" in current_weather_description:
         weather_box_background_color = "#455A64" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1146/1146860.png" 
         weather_text = "Stormy"
         text_color_for_weather_box = "#CFD8DC" 
-    elif "폭염" in current_weather_description or "Hot" in current_weather_description:
+    elif "Hot" in current_weather_description:
         weather_box_background_color = "#FF7043" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1210/1210419.png" 
         weather_text = "Hot"
         text_color_for_weather_box = "#FFFFFF" 
-    elif "한파" in current_weather_description or "Cold" in current_weather_description:
+    elif "Cold" in current_weather_description:
         weather_box_background_color = "#BBDEFB" 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/6120/6120300.png" 
         weather_text = "Cold"
