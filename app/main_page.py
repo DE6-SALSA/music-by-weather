@@ -162,24 +162,11 @@ with col_weather_info:
     st.subheader("현재 날씨")
 
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
-    current_weather_description = weather_data.get("description", "").lower() 
+    current_weather_description = weather_data.get("description", "")
 
     weather_box_background_color = "#FFFFFF" # 기본 흰색
     weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1779/1779940.png" # 기본 아이콘
     weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
-
-    ani_map = {
-        "Clear" : animations.clear_html,
-        "Rainy" : animations.rainy_html,
-        "Snowy" : animations.snowy_html,
-        "Cloudy" : animations.cloudy_html,
-        "Windy" : animations.windy_html,
-        "Stormy" : animations.stormy_html,
-        "Hot" : animations.hot_html,
-        "Cold" : animations.cold_html,
-    }
-    if weather_text in ani_map:
-        st.markdown(ani_map[weather_text](), unsafe_allow_html=True)
 
     if "Clear" in current_weather_description:
         weather_box_background_color = "#FFECB3" 
@@ -218,7 +205,24 @@ with col_weather_info:
         text_color_for_weather_box = "#424242" 
     else: 
         weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1779/1779940.png" 
-        text_color_for_weather_box = "#424242"  
+        text_color_for_weather_box = "#424242"
+        weather_text = "Clear"  
+
+    st.session_state["weather_text"] = weather_text
+
+    ani_map = {
+        "Clear" : animations.clear_html,
+        "Rainy" : animations.rainy_html,
+        "Snowy" : animations.snowy_html,
+        "Cloudy" : animations.cloudy_html,
+        "Windy" : animations.windy_html,
+        "Stormy" : animations.stormy_html,
+        "Hot" : animations.hot_html,
+        "Cold" : animations.cold_html,
+    }
+        
+    st.markdown(ani_map[weather_text](), unsafe_allow_html=True)
+
 
     if weather_data and selected_level1 != "데이터 없음" and selected_level2 != "데이터 없음":
         temperature = weather_data.get('temperature', 'N/A')
