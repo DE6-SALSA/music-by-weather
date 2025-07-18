@@ -5,6 +5,7 @@ on:
     paths:
       - 'dags/*.py'
       - 'etl/*.py'
+    branches: [master]
 
 jobs:
   airflow-dag-test:
