@@ -1,4 +1,4 @@
-name: Airflow DAG CI (Docker Compose)
+name: actions step by step
 
 on:
   push:
@@ -48,11 +48,12 @@ jobs:
           echo "Repository: ${{ github.repository }}"
 
       - name: Trigger CD workflow
-        uses: peter-evans/workflow-dispatch@v3
+        uses: benc-uk/workflow-dispatch@v1
         with:
+          workflow: cd.yml
           token: ${{ secrets.GITHUB_TOKEN }}
-          event-type: trigger-cd
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
+          repo: ${{ github.repository }}
+          ref: refs/heads/dag_cicd
 
       - name: Confirm dispatch step completed
         run: echo "CD dispatch attempt complete"
