@@ -42,8 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call CD workflow
-        uses: peter-evans/workflow-dispatch@v2
+        uses: benc-uk/workflow-dispatch@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
           workflow: cd.yml
+          ref: ${{ github.ref }} 
