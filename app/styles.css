@@ -253,7 +253,6 @@ hr {
     padding-right: 5px;
 }
 
-
 .stButton > button {
     font-size: 0.9em;
     padding: 8px 15px;
@@ -279,10 +278,10 @@ hr {
 }
 
 .stSelectbox > div > div > div > div {
-    border-radius: 5px;
-    border: 1px solid #cccccc;
-    padding: 5px;
-    color: #333333;
+    background: transparent !important;
+    border-radius: none;
+    border: none;
+    padding: 0;
 }
 
 /* Info and Warning messages */

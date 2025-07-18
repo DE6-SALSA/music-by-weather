@@ -168,8 +168,8 @@ with col_weather_info:
     # 날씨 조건별 색상 및 아이콘 매핑
     if "맑음" in current_weather_description or "Clear" in current_weather_description:
         weather_box_background_color = "#FFECB3" 
-        weather_icon_image = "https://cdn-icons-png.flaticon.com/512/861/861053.png" 
-        weather_text = "Sunny"
+        weather_icon_image = "https://www.flaticon.com/kr/free-icons/"
+        weather_text = "Clear"
         text_color_for_weather_box = "#795548" 
     elif "비" in current_weather_description or "Rainy" in current_weather_description:
         weather_box_background_color = "#263238" 
@@ -193,7 +193,7 @@ with col_weather_info:
         text_color_for_weather_box = "#CFD8DC" 
     elif "폭염" in current_weather_description or "Hot" in current_weather_description:
         weather_box_background_color = "#FF7043" 
-        weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1210/1210419.png" 
+        weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1146/1146860.png" 
         weather_text = "Hot"
         text_color_for_weather_box = "#FFFFFF" 
     elif "한파" in current_weather_description or "Cold" in current_weather_description:
