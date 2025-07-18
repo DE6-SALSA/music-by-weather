@@ -70,19 +70,20 @@ def show_chart_rank_page():
     st.markdown("---")
 
     # 테이블 헤더
-    header_cols = st.columns([0.5, 1, 3, 2, 1.5, 1.5, 0.5])
+    header_cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
     header_cols[0].write("**순위**")
     header_cols[1].write("**커버**")
     header_cols[2].write("**제목**")
     header_cols[3].write("**아티스트**")
     header_cols[4].write("**재생 수**")
     header_cols[5].write("**리스너 수**")
-    header_cols[6].write("**상세**")
+    header_cols[6].write("**YouTube 링크**")
+    header_cols[7].write("**Spotify 링크**")
 
     # 데이터 행
     for _, row in display_df.iterrows():
         actual_rank = row['rank']
-        cols = st.columns([0.5, 1, 3, 2, 1.5, 1.5, 0.5])
+        cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
 
         # 순위
         cols[0].write(f"**{actual_rank}**")
@@ -123,23 +124,16 @@ def show_chart_rank_page():
         # 리스너 수
         cols[5].write(f"{row['listener_cnt']:,}")
 
-        # 상세 팝업
+        # Youtube 링크
         with cols[6]:
-            with st.popover("상세 보기"):
-                st.subheader(row['title'])
-                st.write(f"**아티스트:** {row['artist']}")
-                st.write(f"**재생 수:** {row['play_cnt']:,}")
-                st.write(f"**리스너 수:** {row['listener_cnt']:,}")
-                if row['image_url']:
-                    st.image(row['image_url'], caption=f"{row['title']} 커버", width=200)
-                st.markdown("---")
-                st.write("외부 링크:")
-                if row['track_url']:
-                    st.link_button("Last.fm 트랙 페이지", row['track_url'])
-                if row['artist_url']:
-                    st.link_button("Last.fm 아티스트 페이지", row['artist_url'])
-                st.link_button("YouTube에서 듣기", f"https://www.youtube.com/results?search_query={row['artist']}+{row['title']}")
-                st.link_button("Spotify에서 듣기", f"https://open.spotify.com/search/{row['artist']}%20{row['title']}")
+            youtube_url = f"https://www.youtube.com/results?search_query={row['artist']}+{row['title']}"
+            st.link_button("YouTube", youtube_url, help="YouTube에서 듣기")
+
+        # Spotify 링크
+        with cols[7]:
+            spoitify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
+            st.link_button("Spoitify", spoitify_url, help="Spotify에서 듣기")
+            
 
 if __name__ == "__main__":
     show_chart_rank_page()
