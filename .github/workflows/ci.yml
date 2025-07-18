@@ -23,7 +23,7 @@ jobs:
 
       - name: Test DAG parsing
         run: |
-          docker-compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
 
       - name: Shut down Airflow containers
         if: always()
