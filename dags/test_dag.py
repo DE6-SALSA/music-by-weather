@@ -9,7 +9,7 @@ from airflow.models import Variable
 from airflow.utils.dates import datetime
 
 def push_message_to_xcom(**kwargs):
-    return 'im in private ec2'
+    return 'testing actions step by step'
 
 with DAG(
     dag_id='test_dag',
