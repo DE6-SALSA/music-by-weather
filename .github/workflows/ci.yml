@@ -53,7 +53,7 @@ jobs:
           workflow: cd.yml
           token: ${{ secrets.GITHUB_TOKEN }}
           repo: ${{ github.repository }}
-          ref: ${{ github.ref }}
+          ref: refs/heads/dag_cicd
 
       - name: Confirm dispatch step completed
         run: echo "CD dispatch attempt complete"
