@@ -40,11 +40,26 @@ jobs:
   trigger-cd:
     needs: airflow-dag-test
     runs-on: ubuntu-latest
+
     steps:
-      - name: Call CD workflow
+      - name: Print dispatch context
+        run: |
+          echo "Current ref: ${{ github.ref }}"
+          echo "Repository: ${{ github.repository }}"
+
+      - name: Trigger CD workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
+          workflow: deploy_airflow.yml
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          workflow: cd.yml
-          ref: ${{ github.ref }} 
+          repo: ${{ github.repository }}
+          ref: ${{ github.ref }}
+
+      - name: Confirm dispatch step completed
+        run: echo "CD dispatch attempt complete"
+
+      - name: Fail if CD dispatch failed
+        if: failure()
+        run: |
+          echo "CD workflow dispatch failed"
+          exit 1
