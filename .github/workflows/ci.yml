@@ -48,7 +48,7 @@ jobs:
           echo "Repository: ${{ github.repository }}"
 
       - name: Trigger CD workflow
-        uses: benc-uk/workflow-dispatch@v1
+        uses: peter-evans/workflow-dispatch@v2
         with:
           workflow: cd.yml
           token: ${{ secrets.GITHUB_TOKEN }}
