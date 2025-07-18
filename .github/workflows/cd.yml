@@ -1,11 +1,6 @@
 name: Deploy DAG to private EC2 (Selective Sync)
 
 on:
-  push:
-    paths:
-      - 'dags/*.py'
-      - 'etl/*.py'
-    branches: [dag_cicd]
   workflow_dispatch:
 
 jobs:
