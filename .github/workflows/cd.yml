@@ -5,6 +5,7 @@ on:
     paths:
       - 'dags/**'
     branches: [dag_cicd]
+  workflow_dispatch:
 
 jobs:
   deploy:
