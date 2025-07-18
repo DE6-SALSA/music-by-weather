@@ -50,7 +50,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: cd.yml
-          ref: refs/heads/dag_cicd
+          ref: refs/heads/master
 
       - name: Confirm dispatch step completed
         run: echo "CD dispatch attempt complete"
