@@ -209,12 +209,10 @@ with col_weather_info:
                     <img src="{weather_icon_image}" alt="{weather_text}" class='weather-icon'>
                     <span class='temperature' style='color: #424242;'>{temperature}°C</span>
                 </div>
-                <p class='weather-description'>**{weather_text}**</p>
-                <p class='weather-detail'>**습도:** {weather_data.get('humidity', 'N/A')}%</p>
-                <p class='weather-detail'>**강수량:** {weather_data.get('precipitation', 'N/A')} mm</p>
-                <p class='weather-detail'>**강수형태:** {weather_data.get('pty', 'N/A')}</p>
-                <p class='weather-detail'>**풍속:** {weather_data.get('wsd', 'N/A')} m/s</p>
-                <p class='weather-detail'>**하늘상태:** {weather_data.get('sky', 'N/A')}</p>
+                <p class='weather-description'>{weather_text}</p>
+                <p class='weather-detail'>습도: {weather_data.get('humidity', 'N/A')}%</p>
+                <p class='weather-detail'>강수량: {weather_data.get('precipitation', 'N/A')} mm</p>
+                <p class='weather-detail'>풍속: {weather_data.get('wsd', 'N/A')} m/s</p>
             </div>
         """, unsafe_allow_html=True)
     else:
