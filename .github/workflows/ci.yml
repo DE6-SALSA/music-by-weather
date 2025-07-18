@@ -17,7 +17,7 @@ jobs:
 
       - name: Start minimal Airflow environment
         run: |
-          docker-compose -f docker-compose_git.yml up -d airflow-webserver
+          docker compose -f docker-compose_git.yml up -d airflow-webserver
           echo "Waiting for Airflow to initialize..."
           sleep 30
 
@@ -28,8 +28,7 @@ jobs:
       - name: Shut down Airflow containers
         if: always()
         run: |
-          cd .github/ci
-          docker-compose -f docker-compose_git.yml down
+          docker compose -f docker-compose_git.yml down
 
   trigger-cd:
     needs: airflow-dag-test
