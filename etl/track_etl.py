@@ -31,7 +31,7 @@ COLUMNS = [
 def extract_tracks(**kwargs):
     logging.info("Start extract_tracks")
     tracks = []
-    limit = 100
+    limit = 50
     start_page = int(Variable.get(LAST_PAGE_KEY, default_var=1))
     end_page = start_page + 2
 
@@ -48,9 +48,14 @@ def extract_tracks(**kwargs):
         for t in resp.json().get('tracks', {}).get('track', []):
             tracks.append((t['artist']['name'], t['name']))
         time.sleep(0.2)
+        
+    next_page = end_page + 1
+    if next_page > 200:
+        next_page = 1
+        logging.info("  Reached max page limit, resetting to 1")
 
-    Variable.set(LAST_PAGE_KEY, end_page + 1)
-    logging.info(f"  Pulled {len(tracks)} tracks, next page set to {end_page+1}")
+    Variable.set(LAST_PAGE_KEY, next_page)
+    logging.info(f"  Pulled {len(tracks)} tracks, next page set to {next_page}")
     kwargs['ti'].xcom_push(key='tracks', value=tracks)
     logging.info("Finished extract_tracks")
 
