@@ -1,4 +1,4 @@
-name: Deploy DAG to private EC2 (Conditional & Accurate)
+name: Deploy DAG to private EC2 (Selective Sync)
 
 on:
   workflow_dispatch:
@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # git diff를 위해 필요
 
       - name: Set up SSH key
         run: |
@@ -20,38 +18,30 @@ jobs:
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Detect changes in dags and etl
+      - name: Detect changed directories
         id: detect
         run: |
-          git fetch origin master
-
-          CHANGED_DAGS=$(git diff --name-status origin/master...HEAD | grep '^[AMD]' | grep '^dags/' || true)
-          CHANGED_ETL=$(git diff --name-status origin/master...HEAD | grep '^[AMD]' | grep '^etl/' || true)
-
-          echo "changed_dags=$(if [ -n \"$CHANGED_DAGS\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
-          echo "changed_etl=$(if [ -n \"$CHANGED_ETL\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
+          echo "changed_dirs=$CHANGED" >> $GITHUB_OUTPUT
 
       - name: Transfer changed directories to bastion
+        if: steps.detect.outputs.changed_dirs != ''
         run: |
-          if [[ "${{ steps.detect.outputs.changed_dags }}" == "true" ]]; then
-            echo "Transferring dags/ to bastion"
-            rsync -avz --delete \
-              -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
-              dags/ ec2-user@${{ secrets.BASTION_HOST }}:~/temp_dags/
-          fi
+          for DIR in ${{ steps.detect.outputs.changed_dirs }}; do
+            if [[ "$DIR" == "dags" || "$DIR" == "etl" ]]; then
+              echo "Transferring $DIR to bastion"
+              rsync -avz --delete \
+                -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+                "$DIR/" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$DIR/
+            fi
+          done
 
-          if [[ "${{ steps.detect.outputs.changed_etl }}" == "true" ]]; then
-            echo "Transferring etl/ to bastion"
-            rsync -avz --delete \
-              -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
-              etl/ ec2-user@${{ secrets.BASTION_HOST }}:~/temp_etl/
-          fi
-
-      - name: Sync from bastion to private EC2
+      - name: Sync to private EC2 from bastion
+        if: steps.detect.outputs.changed_dirs != ''
         run: |
           ssh -i ~/.ssh/ec2_key.pem \
               -o StrictHostKeyChecking=no \
-              ec2-user@${{ secrets.BASTION_HOST }} <<"EOF"
+              ec2-user@${{ secrets.BASTION_HOST }} <<'EOF'
             for DIR in dags etl; do
               if [ -d ~/temp_$DIR ]; then
                 echo "Syncing $DIR to private EC2"
@@ -61,4 +51,4 @@ jobs:
                 rm -rf ~/temp_$DIR/
               fi
             done
-EOF
+          EOF
