@@ -23,7 +23,7 @@ jobs:
       - name: Detect changes in dags and etl
         id: detect
         run: |
-          git fetch origin main
+          git fetch origin master
 
           CHANGED_DAGS=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*dags/' || true)
           CHANGED_ETL=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*etl/' || true)
