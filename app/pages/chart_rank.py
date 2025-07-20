@@ -1,10 +1,13 @@
 import streamlit as st
 import requests
 import pandas as pd
+import json
+import os
 import animations
 
 FASTAPI_BACKEND_URL = "http://localhost:8000"
 ITEMS_PER_PAGE = 20
+DATA_FILE = "chart_data.json"
 
 st.set_page_config(layout="wide", page_title="음악 차트 순위")
 
@@ -14,6 +17,31 @@ st.markdown("""
 .stApp, body { background: transparent !important; }
 </style>
 """, unsafe_allow_html=True)
+
+def get_chart_data():
+    try:
+        response = requests.get(f"{FASTAPI_BACKEND_URL}/chart_rank")
+        response.raise_for_status()
+        return pd.DataFrame(response.json())
+    except requests.exceptions.ConnectionError:
+        st.error("백엔드 서버에 연결할 수 없습니다. FastAPI 서버가 실행 중인지 확인해주세요.")
+        return pd.DataFrame()
+    except requests.exceptions.RequestException as e:
+        st.error(f"데이터를 가져오는 중 오류가 발생했습니다: {e}")
+        return pd.DataFrame()
+
+def load_or_initialize_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding='utf-8') as f:
+            data = json.load(f)
+        return pd.DataFrame(data)
+    else:
+        with st.spinner("차트 데이터를 로드 중입니다..."):
+            df = get_chart_data()
+            if not df.empty:
+                with open(DATA_FILE, "w", encoding='utf-8') as f:
+                    json.dump(df.to_dict(orient='records'), f)
+            return df
 
 def show_chart_rank_page():
     weather_text = st.session_state.get("weather_text", None)
@@ -35,25 +63,11 @@ def show_chart_rank_page():
     if weather_text in anim_map:
         st.markdown(anim_map[weather_text](), unsafe_allow_html=True)
 
-
     st.title("음악 차트 순위")
     st.markdown("---")
 
-    # 데이터 로드
-    @st.cache_data(ttl=300)
-    def get_chart_data():
-        try:
-            response = requests.get(f"{FASTAPI_BACKEND_URL}/chart_rank")
-            response.raise_for_status()
-            return pd.DataFrame(response.json())
-        except requests.exceptions.ConnectionError:
-            st.error("백엔드 서버에 연결할 수 없습니다. FastAPI 서버가 실행 중인지 확인해주세요.")
-            return pd.DataFrame()
-        except requests.exceptions.RequestException as e:
-            st.error(f"데이터를 가져오는 중 오류가 발생했습니다: {e}")
-            return pd.DataFrame()
-
-    df = get_chart_data()
+    # 데이터 로드 (한 번 조회 후 파일에서 유지)
+    df = load_or_initialize_data()
 
     if df.empty:
         st.info("표시할 차트 데이터가 없습니다.")
@@ -133,7 +147,6 @@ def show_chart_rank_page():
                 unsafe_allow_html=True
             )
 
-
         # 제목
         if row['track_url']:
             cols[2].markdown(f"[{row['title']}]({row['track_url']})")
@@ -161,7 +174,6 @@ def show_chart_rank_page():
         with cols[7]:
             spoitify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
             st.link_button("Spoitify", spoitify_url, help="Spotify에서 듣기")
-            
 
 if __name__ == "__main__":
     show_chart_rank_page()
