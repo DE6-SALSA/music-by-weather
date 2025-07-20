@@ -21,11 +21,6 @@ COLUMNS = [
     "tag1", "tag2", "tag3", "tag4", "tag5"
 ]
 
-# XCom: tracks
-# XCom: enriched_tracks
-# XCom: s3_key_csv, s3_key_parquet
-# XCom: csv_copy_time, parquet_copy_time
-
 def save_csv_to_s3(**kwargs):
     ti = kwargs['ti']
     enriched = ti.xcom_pull(key='enriched_tracks')
