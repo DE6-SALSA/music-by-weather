@@ -25,8 +25,8 @@ jobs:
         run: |
           git fetch origin main
 
-          CHANGED_DAGS=$(git diff --name-status origin/main...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*dags/' || true)
-          CHANGED_ETL=$(git diff --name-status origin/main...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*etl/' || true)
+          CHANGED_DAGS=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*dags/' || true)
+          CHANGED_ETL=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*etl/' || true)
 
           echo "changed_dags=$(if [ -n \"$CHANGED_DAGS\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
           echo "changed_etl=$(if [ -n \"$CHANGED_ETL\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
