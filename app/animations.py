@@ -258,30 +258,30 @@ def hot_html() -> str:
       .weather-container.hot-container {{
         position:fixed; top:0; left:0;
         width:100vw; height:100vh;
-        background: linear-gradient(to bottom, #ff512f, #dd2476);
+        background: linear-gradient(to bottom, #ffcccc, #ff9999);
         pointer-events:none; z-index:-1;
       }}
       .sun {{
         position:absolute; top:10%; left:50%;
         width:250px; height:250px;
         background: radial-gradient(circle at center,
-                    rgba(255,255,150,1) 0%, rgba(255,200,0,0.5) 60%);
-        border-radius:50%; filter: blur(30px);
+                    rgba(255,240,200,0.7) 0%, rgba(255,200,0,0.3) 60%);
+        border-radius:50%; filter: blur(20px);
         animation: sunGlow 6s ease-in-out infinite;
         transform: translateX(-50%);
       }}
       @keyframes sunGlow {{
-        0%,100% {{ transform: translateX(-50%) scale(1); opacity:0.8; }}
-        50%    {{ transform: translateX(-50%) scale(1.2); opacity:1; }}
+        0%,100% {{ transform: translateX(-50%) scale(1); opacity:0.6; }}
+        50%    {{ transform: translateX(-50%) scale(1.1); opacity:0.8; }}
       }}
       .wave {{
-        position:absolute; border:2px solid rgba(255,255,255,0.5);
+        position:absolute; border:2px solid rgba(255,255,255,0.3);
         border-radius:50%; opacity:0;
         animation: waveRise 4s ease-in-out infinite;
       }}
       @keyframes waveRise {{
         0%,100% {{ transform: scale(1); opacity:0; }}  
-        50%     {{ transform: scale(1.3); opacity:0.5; }}
+        50%     {{ transform: scale(1.1); opacity:0.3; }}
       }}
     </style>
     <div class="weather-container hot-container">
