@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-# Airflow etl 디렉토리 경로 추가
 sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME','/opt/airflow'), 'etl'))
 
 from extract_enrich import extract_tracks, enrich_tracks
