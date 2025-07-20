@@ -129,13 +129,11 @@ def get_current_weather_from_redshift_internal(level1: str, level2: str) -> Dict
         conn = get_redshift_connection_internal()
         cur = conn.cursor()
 
-        # date (VARCHAR), time (VARCHAR) 컬럼을 사용하여 최신 데이터를 가져오는 쿼리
-        # Redshift의 TO_TIMESTAMP 함수를 사용하여 datetime 객체를 생성하고 정렬
         query = """
             SELECT weather_condition, t1h, reh, rn1, pty, wsd, sky
             FROM raw_data.weather_data
             WHERE level1 = %s AND level2 = %s
-            ORDER BY date + CAST(time AS TIME) DESC -- DATE + TIME으로 TIMESTAMP 생성
+            ORDER BY date + CAST(time AS TIME) DESC
             LIMIT 1;
         """
         
@@ -144,17 +142,15 @@ def get_current_weather_from_redshift_internal(level1: str, level2: str) -> Dict
         result = cur.fetchone()
 
         if result:
-            temperature = result[1] # Redshift에서 가져온 t1h 값
+            temperature = result[1]
             try:
-                # 안전하게 float으로 변환 시도. NULL이거나 변환 불가 시 None으로 설정
                 temperature = float(temperature) if temperature is not None else None
             except (ValueError, TypeError):
-                # 숫자로 변환할 수 없는 경우 (예: 'N/A' 또는 빈 문자열)
                 temperature = None 
 
             weather_info = {
                 "description": result[0],
-                "temperature": temperature, # 변환된 temperature 사용
+                "temperature": temperature,
                 "humidity": result[2],
                 "precipitation": result[3],
                 "pty": result[4],
@@ -183,12 +179,8 @@ async def get_current_weather(level1: str = Query(..., description="시/도 이�
         raise HTTPException(status_code=404, detail=f"{level1} {level2}에 대한 날씨 정보를 찾을 수 없습니다.")
     return weather_info
 
-# --- Redshift 쿼리 생성 함수 (수정: 무작위성 강화) ---
+# --- Redshift 쿼리 생성 함수 ---
 def build_redshift_query(weather_condition: Optional[str] = None, tags: Optional[List[str]] = None, search_query: Optional[str] = None, limit: int = 10, randomize: bool = False) -> str:
-    """
-    Redshift에서 음악 데이터를 가져오기 위한 SQL 쿼리를 생성합니다.
-    randomize=True일 때 ORDER BY RANDOM()을 보장하고, 매번 다른 결과를 위해 재현성을 제거.
-    """
     select_clause = "artist, title, play_cnt, listener_cnt, tag1, tag2, tag3, tag4, tag5"
     base_query = f"SELECT {select_clause} FROM raw_data.top_tag5"
     conditions = [] 
@@ -294,7 +286,7 @@ async def get_music_data_from_redshift_internal(
 ) -> List[Dict]:
     conn = None
     cur = None
-    music_data = [] # 최종 결과를 담을 리스트
+    music_data = []
 
     try:
         conn = get_redshift_connection_internal() 
@@ -302,8 +294,7 @@ async def get_music_data_from_redshift_internal(
 
         full_query = build_redshift_query(weather_condition, tags, search_query, limit, randomize)
         
-        print(f"\n[DEBUG] Executing music query:")
-        print(f"[DEBUG] Query: {full_query}")
+        print(f"\n[DEBUG] Executing music query: {full_query}")
         
         cur.execute(full_query) 
         music_records = cur.fetchall()
@@ -328,18 +319,18 @@ async def get_music_data_from_redshift_internal(
                 if f'tag{i}' in music_dict:
                     del music_dict[f'tag{i}']
             
-            # Redshift 데이터만 먼저 추가
             music_data.append(music_dict) 
             
-            # Last.fm 호출 태스크 추가 (await 없이)
             lastfm_tasks.append(get_lastfm_track_info(music_dict['artist'], music_dict['title']))
 
-        # 모든 Last.fm 태스크 병렬 실행 및 결과 대기
-        lastfm_results = await asyncio.gather(*lastfm_tasks)
+        lastfm_results = await asyncio.gather(*lastfm_tasks, return_exceptions=True)
 
-        # Last.fm 결과를 music_data에 통합
         for i, lastfm_info in enumerate(lastfm_results):
-            music_data[i].update(lastfm_info) 
+            if isinstance(lastfm_info, Exception):
+                print(f"[ERROR] Last.fm API call failed for track {i+1}: {music_data[i]['artist']} - {music_data[i]['title']}, Error: {lastfm_info}")
+                music_data[i].update({"image_url": "", "artist_url": "", "track_url": ""})
+            else:
+                music_data[i].update(lastfm_info)
 
     except HTTPException as e:
         print(f"[DEBUG] HTTPException in get_music_data_from_redshift_internal: {e}")
@@ -361,10 +352,6 @@ async def get_music_data_from_redshift_internal(
 
 # --- Last.fm API 호출 함수 ---
 async def get_lastfm_track_info(artist: str, track: str) -> Dict[str, str]:
-    """
-    Last.fm API에서 비동기적으로 트랙 정보를 가져온다.
-    이미지 URL, 아티스트 URL, 트랙 URL
-    """
     async with httpx.AsyncClient() as client:
         params = {
             "method": "track.getInfo",
@@ -374,44 +361,40 @@ async def get_lastfm_track_info(artist: str, track: str) -> Dict[str, str]:
             "format": "json"
         }
         try:
-            response = await client.get(LASTFM_API_URL, params=params, timeout=5)
+            print(f"[DEBUG] Calling Last.fm API for artist: {artist}, track: {track}")
+            response = await client.get(LASTFM_API_URL, params=params, timeout=15)  # 타임아웃 10초 -> 15초
             response.raise_for_status()
             data = response.json()
 
             result_dict = {"image_url": "", "artist_url": "", "track_url": ""}
 
-            # Last.fm 응답에서 필요한 정보 추출 (기존 로직 동일)
             track_info = data.get("track", {})
             if track_info:
-                # 이미지 URL 추출 (다양한 크기 중 'extralarge' 또는 'large' 우선)
                 if "album" in track_info and "image" in track_info["album"]:
                     for img in track_info["album"]["image"]:
                         if img.get("size") == "extralarge" and img.get("#text"):
                             result_dict["image_url"] = img["#text"]
                             break
-                    if not result_dict["image_url"]: # extralarge가 없으면 large를 시도
+                    if not result_dict["image_url"]:
                         for img in track_info["album"]["image"]:
                             if img.get("size") == "large" and img.get("#text"):
                                 result_dict["image_url"] = img["#text"]
                                 break
                 
-                # 아티스트 URL 및 트랙 URL 추출
                 result_dict["artist_url"] = track_info.get("artist", {}).get("url", "")
                 result_dict["track_url"] = track_info.get("url", "")
             
+            print(f"[DEBUG] Last.fm API response for {artist} - {track}: {result_dict}")
             return result_dict
 
         except httpx.RequestError as e:
-            # 네트워크 오류, 타임아웃 등의 요청 관련 오류 처리
-            print(f"Last.fm API 호출 오류 (아티스트: {artist}, 트랙: {track}): {e}")
+            print(f"[ERROR] Last.fm API 호출 오류 (아티스트: {artist}, 트랙: {track}): {e}")
             return {"image_url": "", "artist_url": "", "track_url": ""}
         except httpx.HTTPStatusError as e:
-            # 4xx 또는 5xx 응답 상태 코드 오류 처리
-            print(f"Last.fm API 응답 오류 (아티스트: {artist}, 트랙: {track}): {e.response.status_code} - {e.response.text}")
+            print(f"[ERROR] Last.fm API 응답 오류 (아티스트: {artist}, 트랙: {track}): {e.response.status_code} - {e.response.text}")
             return {"image_url": "", "artist_url": "", "track_url": ""}
         except Exception as e:
-            # 그 외 예상치 못한 오류 처리
-            print(f"Last.fm API 처리 중 알 수 없는 오류 발생 (아티스트: {artist}, 트랙: {track}): {e}")
+            print(f"[ERROR] Last.fm API 처리 중 알 수 없는 오류 발생 (아티스트: {artist}, 트랙: {track}): {e}")
             return {"image_url": "", "artist_url": "", "track_url": ""}
 
 # --- 새로운 엔드포인트: level1 목록 가져오기 ---
@@ -445,9 +428,8 @@ async def get_level2_list(level1_name: str = Query(..., description="조회할 l
     try:
         conn = get_redshift_connection_internal()
         cursor = conn.cursor()
-        # SQL 인젝션 방지를 위해 플레이스홀더 사용
         query = "SELECT DISTINCT level2 FROM raw_data.weather_data WHERE level1 = %s ORDER BY level2;"
-        cursor.execute(query, (level1_name,)) # 파라미터를 튜플로 전달
+        cursor.execute(query, (level1_name,))
         results = cursor.fetchall()
         level2_list = [row[0] for row in results]
     except HTTPException as e:
@@ -459,10 +441,9 @@ async def get_level2_list(level1_name: str = Query(..., description="조회할 l
             conn.close()
     return level2_list
 
-# --- 3. 날씨 기반 음악 추천 API 엔드포인트 (수정: randomize 추가) ---
+# --- 3. 날씨 기반 음악 추천 API 엔드포인트 ---
 @app.get("/recommend/weather", response_model=List[Dict])
 async def recommend_music_by_weather(location: str = "서울특별시", sub_location: Optional[str] = None, randomize: bool = Query(False, description="무작위 추천 여부")): 
-    # get_current_weather_from_redshift_internal이 동기 함수라면 await 필요 없음.
     weather_info = get_current_weather_from_redshift_internal(location, sub_location if sub_location else "강남구")
     current_condition = weather_info.get("description") 
 
@@ -482,11 +463,11 @@ async def recommend_music_by_weather(location: str = "서울특별시", sub_loca
     
     return recommended_music
 
-# --- 4. 태그 기반 음악 검색 API 엔드포인트 (수정: randomize 추가) ---
+# --- 4. 태그 기반 음악 검색 API 엔드포인트 ---
 @app.get("/search/music", response_model=List[Dict], tags=["Music Search"]) 
 async def search_music(
     query: str = Query(..., min_length=2, description="검색할 곡명, 아티스트, 앨범 또는 태그"),
-    limit: int = 20,
+    limit: int = Query(20, description="반환할 결과의 최대 개수"),
     randomize: bool = Query(False, description="무작위 추천 여부")
 ):
     if not query:
@@ -504,7 +485,7 @@ async def search_music(
 async def get_chart_rank(limit: int = 100):
     music_rank_data = []
     conn = None
-    cur = None # cur 변수 초기화 추가
+    cur = None
     try:
         conn = get_redshift_connection_internal()
         cur = conn.cursor()
@@ -514,17 +495,20 @@ async def get_chart_rank(limit: int = 100):
         query = f"""
         SELECT {select_clause}
         FROM raw_data.top_tag5
-        ORDER BY load_time DESC
+        ORDER BY play_cnt DESC, listener_cnt DESC
         LIMIT %s;
         """
         cur.execute(query, (limit,))
         music_records = cur.fetchall()
 
+        print(f"[DEBUG] Number of chart rank records fetched: {len(music_records)}")
+        if music_records:
+            print(f"[DEBUG] First chart rank record: {music_records[0]}")
+
         columns = [desc[0] for desc in cur.description]
         
-        lastfm_tasks = [] # Last.fm API 호출 태스크들을 담을 리스트
+        lastfm_tasks = []
         
-        # Redshift 레코드를 기반으로 기본 music_dict를 만들고 Last.fm 태스크를 준비
         for i, record in enumerate(music_records):
             music_dict = dict(zip(columns, record))
             combined_tags = [
@@ -539,12 +523,17 @@ async def get_chart_rank(limit: int = 100):
             music_dict['rank'] = i + 1 
             
             lastfm_tasks.append(get_lastfm_track_info(music_dict['artist'], music_dict['title']))
-            music_rank_data.append(music_dict) # 먼저 Redshift 데이터와 rank를 추가
+            music_rank_data.append(music_dict)
 
-        lastfm_results = await asyncio.gather(*lastfm_tasks)
+        lastfm_results = await asyncio.gather(*lastfm_tasks, return_exceptions=True)
 
         for i, lastfm_info in enumerate(lastfm_results):
-            music_rank_data[i].update(lastfm_info) 
+            if isinstance(lastfm_info, Exception):
+                print(f"[ERROR] Last.fm API call failed for rank {i+1}: {music_rank_data[i]['artist']} - {music_rank_data[i]['title']}, Error: {lastfm_info}")
+                music_rank_data[i].update({"image_url": "", "artist_url": "", "track_url": ""})
+            else:
+                music_rank_data[i].update(lastfm_info)
+                print(f"[DEBUG] Integrated Last.fm data for rank {i+1}: {music_rank_data[i]['artist']} - {music_rank_data[i]['title']}, Image: {music_rank_data[i]['image_url']}")
 
     except HTTPException as e:
         print(f"[DEBUG] HTTPException in get_chart_rank: {e}")
@@ -565,18 +554,6 @@ async def get_chart_rank(limit: int = 100):
         raise HTTPException(status_code=404, detail="차트 순위 데이터를 찾을 수 없습니다.")
 
     return music_rank_data
-
-# --- 6. 음악 검색 API ---
-@app.get("/search/music", response_model=List[Dict])
-async def search_music(
-    query: str = Query(..., min_length=2, description="검색할 곡명, 아티스트, 앨범 또는 태그"),
-    limit: int = 20
-):
-    search_results = get_music_data_from_redshift_internal(search_query=query, limit=limit)
-
-    if not search_results:
-        raise HTTPException(status_code=404, detail=f"'{query}'에 대한 검색 결과를 찾을 수 없습니다.")
-    return search_results
 
 if __name__ == "__main__":
     import uvicorn

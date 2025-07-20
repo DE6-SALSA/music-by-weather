@@ -54,7 +54,7 @@ hr {
     margin: 40px 0;
 }
 
-/* 날씨 정보 박스의 내부 컨테이너 (날씨별 색상 변경을 위해 유지) */
+/* 날씨 정보 박스의 내부 컨테이너 */
 .weather-content {
     border-radius: 8px;
     padding: 15px;
@@ -71,16 +71,17 @@ hr {
 /* Specific Weather Box Styling (weather-content 내부 스타일) */
 .weather-display {
     display: flex;
+    flex-direction: column; /* 세로 배치로 변경 */
     align-items: center;
     justify-content: center;
-    gap: 15px;
+    gap: 10px; /* 이미지와 온도 사이 간격 줄임 */
     margin-top: 15px;
     margin-bottom: 10px;
 }
 
 .weather-icon {
-    width: 60px;
-    height: 60px;
+    width: 120px; /* GIF 크기 증가 */
+    height: 120px;
     display: block;
 }
 
