@@ -57,14 +57,19 @@ def extract_tracks(**kwargs):
     Variable.set(LAST_PAGE_KEY, next_page)
     logging.info(f"  Pulled {len(tracks)} tracks, next page set to {next_page}")
     kwargs['ti'].xcom_push(key='tracks', value=tracks)
+    kwargs['ti'].xcom_push(key='total_fetched', value=len(tracks))
     logging.info("Finished extract_tracks")
+
 
 def enrich_with_tags(**kwargs):
     logging.info("Start enrich_with_tags")
     ti = kwargs['ti']
     tracks = ti.xcom_pull(key='tracks')
+    total_fetched = ti.xcom_pull(key='total_fetched')
     logging.info(f"  Retrieved {len(tracks)} tracks from XCom")
+
     enriched = []
+    pg_hook = PostgresHook(postgres_conn_id='redshift_conn')
 
     for artist, title in tracks:
         logging.info(f"    Enriching: {artist} / {title}")
@@ -84,6 +89,13 @@ def enrich_with_tags(**kwargs):
             listeners = int(info.get('listeners', 0))
         except Exception as e:
             logging.warning(f"      Error for {artist}-{title}: {e}")
+            pg_hook.run(
+                """
+                INSERT INTO raw_data.track_out (artist, title, reason, dropped_at, total_fetched)
+                VALUES (%s, %s, %s, current_timestamp, %s);
+                """,
+                parameters=(artist, title, "fetch_error", total_fetched)
+            )
             playcount = listeners = 0
             tags = [None]*5
 
@@ -93,6 +105,7 @@ def enrich_with_tags(**kwargs):
     logging.info(f"  Enriched total {len(enriched)} records")
     ti.xcom_push(key='enriched_tracks', value=enriched)
     logging.info("Finished enrich_with_tags")
+
 
 def save_to_s3_csv(**kwargs):
     logging.info("Start save_to_s3_csv")
@@ -121,7 +134,7 @@ def copy_to_redshift(**kwargs):
     logging.info("Start copy_to_redshift")
     ti = kwargs['ti']
     s3_key = ti.xcom_pull(key='s3_key')
-
+    total_fetched = ti.xcom_pull(key='total_fetched')
     col_str = ", ".join(COLUMNS)
 
     truncate_staging_sql = "TRUNCATE TABLE raw_data.top_tag5_staging;"
@@ -143,8 +156,18 @@ def copy_to_redshift(**kwargs):
         WHERE t.artist IS NULL;
     """
 
+    dup_insert_sql = f"""
+        INSERT INTO raw_data.track_out (artist, title, reason, dropped_at, total_fetched)
+        SELECT s.artist, s.title, 'duplicated', current_timestamp, {total_fetched}
+        FROM raw_data.top_tag5_staging s
+        JOIN raw_data.top_tag5 t
+          ON s.artist = t.artist AND s.title = t.title;
+    """
+
     hook = PostgresHook(postgres_conn_id='redshift_conn')
     hook.run(truncate_staging_sql)
     hook.run(copy_sql)
     hook.run(merge_sql)
-    logging.info("Finished copy_to_redshift with staging + deduplication insert!")
+    hook.run(dup_insert_sql)
+    logging.info("Finished copy_to_redshift with deduplication and tracking")
+
