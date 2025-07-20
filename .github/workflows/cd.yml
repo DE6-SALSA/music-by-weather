@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # 필수: git diff가 작동하려면 전체 히스토리 필요
+          fetch-depth: 0  # git diff를 위해 필요
 
       - name: Set up SSH key
         run: |
@@ -25,8 +25,8 @@ jobs:
         run: |
           git fetch origin master
 
-          CHANGED_DAGS=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*dags/' || true)
-          CHANGED_ETL=$(git diff --name-status origin/master...HEAD | grep '^\\(A\\|M\\|D\\)' | grep '^.*etl/' || true)
+          CHANGED_DAGS=$(git diff --name-status origin/master...HEAD | grep '^[AMD]' | grep '^dags/' || true)
+          CHANGED_ETL=$(git diff --name-status origin/master...HEAD | grep '^[AMD]' | grep '^etl/' || true)
 
           echo "changed_dags=$(if [ -n \"$CHANGED_DAGS\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
           echo "changed_etl=$(if [ -n \"$CHANGED_ETL\" ]; then echo true; else echo false; fi)" >> $GITHUB_OUTPUT
@@ -51,15 +51,14 @@ jobs:
         run: |
           ssh -i ~/.ssh/ec2_key.pem \
               -o StrictHostKeyChecking=no \
-              ec2-user@${{ secrets.BASTION_HOST }} <<'EOF'
-
+              ec2-user@${{ secrets.BASTION_HOST }} <<"EOF"
             for DIR in dags etl; do
               if [ -d ~/temp_$DIR ]; then
-                echo "Syncing \$DIR to private EC2"
+                echo "Syncing $DIR to private EC2"
                 rsync -avz --delete \
                   -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
-                  ~/temp_$DIR/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/\$DIR/
+                  ~/temp_$DIR/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$DIR/
                 rm -rf ~/temp_$DIR/
               fi
             done
-          EOF
+EOF
