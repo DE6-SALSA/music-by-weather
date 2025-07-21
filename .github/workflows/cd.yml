@@ -21,61 +21,60 @@ jobs:
       - name: Detect changed directories
         id: detect
         run: |
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
-          echo "changed_dirs=$CHANGED" >> $GITHUB_OUTPUT
+          # Detect changed files using git ls-files
+          CHANGED=$(git ls-files --modified --others --exclude-standard)
+          echo "changed_files=$CHANGED" >> $GITHUB_OUTPUT
 
       - name: Ensure files exist in dags and etl
         run: |
-          # Check if there are any changes in the dags or etl directories
-          if [[ " ${CHANGED[@]} " =~ " dags " ]]; then
-            for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^dags/'); do
+          # Ensure files exist in dags and etl directories
+          for file in $CHANGED; do
+            if [[ "$file" == dags/* ]]; then
               if [[ ! -f "$file" ]]; then
-                echo "File $file does not exist in the dags directory, creating or copying it."
-                # Here you can copy from a backup or create the file
-                cp "backup/$file" "$file"
-                # Alternatively, if no backup exists, you can create an empty file
-                # touch "$file"
+                echo "File $file does not exist in the dags directory, creating it."
+                # Create an empty file if it does not exist
+                touch "$file"
+                # Alternatively, if you want to copy from a backup folder, use:
+                # cp "backup/$file" "$file"
               fi
-            done
-          fi
-          
-          if [[ " ${CHANGED[@]} " =~ " etl " ]]; then
-            for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^etl/'); do
+            fi
+
+            if [[ "$file" == etl/* ]]; then
               if [[ ! -f "$file" ]]; then
-                echo "File $file does not exist in the etl directory, creating or copying it."
-                # Here you can copy from a backup or create the file
-                cp "backup/$file" "$file" 
-                # Alternatively, if no backup exists, you can create an empty file
-                # touch "$file"
+                echo "File $file does not exist in the etl directory, creating it."
+                # Create an empty file if it does not exist
+                touch "$file"
+                # Alternatively, if you want to copy from a backup folder, use:
+                # cp "backup/$file" "$file"
               fi
-            done
-          fi
+            fi
+          done
 
       - name: Transfer changed directories to bastion
-        if: steps.detect.outputs.changed_dirs != ''
+        if: steps.detect.outputs.changed_files != ''
         run: |
-          for DIR in ${{ steps.detect.outputs.changed_dirs }}; do
-            if [[ "$DIR" == "dags" || "$DIR" == "etl" ]]; then
-              echo "Transferring $DIR to bastion"
-              rsync -avz --delete \
+          for file in $CHANGED; do
+            if [[ "$file" == dags/* || "$file" == etl/* ]]; then
+              echo "Transferring $file to bastion"
+              rsync -avz --progress --delete \
                 -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
-                "$DIR/" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$DIR/
+                "$file" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$file/
             fi
           done
 
       - name: Sync to private EC2 from bastion
-        if: steps.detect.outputs.changed_dirs != ''
+        if: steps.detect.outputs.changed_files != ''
         run: |
           ssh -i ~/.ssh/ec2_key.pem \
               -o StrictHostKeyChecking=no \
               ec2-user@${{ secrets.BASTION_HOST }} <<'EOF'
-            for DIR in dags etl; do
-              if [ -d ~/temp_$DIR ]; then
-                echo "Syncing $DIR to private EC2"
-                rsync -avz --delete \
+            for file in $CHANGED; do
+              if [ -f ~/temp_$file ]; then
+                echo "Syncing $file to private EC2"
+                rsync -avz --progress --delete \
                   -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
-                  ~/temp_$DIR/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$DIR/
-                rm -rf ~/temp_$DIR/
+                  ~/temp_$file/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$file/
+                rm -rf ~/temp_$file/
               fi
             done
           EOF
