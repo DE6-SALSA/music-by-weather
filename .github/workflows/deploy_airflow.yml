@@ -27,9 +27,9 @@ jobs:
       - name: Detect changed folders
         id: detect
         run: |
-          git fetch origin master
-          CHANGED_DAGS=$(git diff --name-only origin/master...HEAD | grep '^dags/' || true)
-          CHANGED_ETL=$(git diff --name-only origin/master...HEAD | grep '^etl/' || true)
+          git fetch origin dag_cicd
+          CHANGED_DAGS=$(git diff --name-only origin/dag_cicd...HEAD | grep '^dags/' || true)
+          CHANGED_ETL=$(git diff --name-only origin/dag_cicd...HEAD | grep '^etl/' || true)
           
           echo "dags_changed=$([ -n \"$CHANGED_DAGS\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "etl_changed=$([ -n \"$CHANGED_ETL\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
