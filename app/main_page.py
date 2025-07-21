@@ -161,9 +161,8 @@ with col_weather_info:
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
     current_weather_description = weather_data.get("description", "")
 
-    
-    # weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
-    # text_weather_for_weather_box = "#000000"
+    weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
+    text_weather_for_weather_box = "#000000"
 
     # 디버그 override
     if debug_weather != "(API 사용)":
@@ -194,7 +193,6 @@ with col_weather_info:
 
     weather_text = current_weather_description if current_weather_description in mapping else "Clear"
     weather_video = mapping[weather_text] 
-
     st.session_state["weather_text"] = weather_text
 
     ani_map = {
