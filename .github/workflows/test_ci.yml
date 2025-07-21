@@ -1,0 +1,47 @@
+name: dag ci
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'dags/**'
+      - 'etl/**'
+
+jobs:
+  airflow-dag-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Start dependencies (Postgres & Redis)
+        run: docker compose -f docker-compose_git.yml up -d postgres redis
+
+      - name: Wait for DB to be ready
+        run: sleep 10
+
+      - name: Initialize Airflow DB
+        run: docker compose -f docker-compose_git.yml run airflow-webserver airflow db migrate
+
+      - name: Start Airflow Webserver
+        run: docker compose -f docker-compose_git.yml up -d airflow-webserver
+
+      - name: Wait for Airflow to initialize
+        run: sleep 30
+
+      - name: Set dummy Airflow Variables
+        run: |
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver bash -c "
+            airflow variables set WEATHER_API_KEY 'dummy-weather-key' &&
+            airflow variables set S3_BUCKET_NAME 'dummy-bucket' &&
+            airflow variables set S3_ACCESS_KEY 'dummy-access-key' &&
+            airflow variables set S3_SECRET_KEY 'dummy-secret-key' &&
+            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url'
+          "
+
+      - name: Test DAG parsing
+        run: docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+      - name: Shut down Airflow containers
+        if: always()
+        run: docker compose -f docker-compose_git.yml down

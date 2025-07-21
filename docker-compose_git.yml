@@ -37,5 +37,6 @@ services:
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./etl:/opt/airflow/etl
     command: webserver
 
