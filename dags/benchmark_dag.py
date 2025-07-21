@@ -21,7 +21,7 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=2)
 }
-
+#test
 dag = DAG(
     dag_id='format_comparison_benchmark',
     description='Benchmark CSV vs Parquet format for Redshift ingestion',
