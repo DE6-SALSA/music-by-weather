@@ -21,31 +21,40 @@ jobs:
       - name: Detect changed directories
         id: detect
         run: |
-          # Detect changed files using git ls-files
-          CHANGED=$(git ls-files --modified --others --exclude-standard)
+          # Detect changed files using git diff
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sort -u)
           echo "changed_files=$CHANGED" >> $GITHUB_OUTPUT
+
+          # Output current branch
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch: $BRANCH"
+
+          # Output changed directories
+          echo "Changed directories:"
+          for dir in $CHANGED; do
+            echo " - $dir"
+          done
 
       - name: Ensure files exist in dags and etl
         run: |
-          # Ensure files exist in dags and etl directories
           for file in $CHANGED; do
-            if [[ "$file" == dags/* ]]; then
+            if [[ "$file" == dags/* || "$file" == etl/* ]]; then
               if [[ ! -f "$file" ]]; then
-                echo "File $file does not exist in the dags directory, creating it."
-                # Create an empty file if it does not exist
-                touch "$file"
-                # Alternatively, if you want to copy from a backup folder, use:
+                echo "File $file does not exist in the $file directory, creating it."
+                # Create an empty file or copy it from a backup
+                touch "$file"  # Create an empty file
+                # Optionally, you can copy from a backup location if available:
                 # cp "backup/$file" "$file"
-              fi
-            fi
+                
+                # Output copied or created file contents
+                echo "Created file $file with content:"
+                cat "$file"  # Output the file's content
 
-            if [[ "$file" == etl/* ]]; then
-              if [[ ! -f "$file" ]]; then
-                echo "File $file does not exist in the etl directory, creating it."
-                # Create an empty file if it does not exist
-                touch "$file"
-                # Alternatively, if you want to copy from a backup folder, use:
-                # cp "backup/$file" "$file"
+                # Log the directory, branch, and file creation details
+                echo "Changed directory: $file"
+                echo "Current branch: $BRANCH"
+                echo "File content:"
+                cat "$file"
               fi
             fi
           done
