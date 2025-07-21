@@ -27,7 +27,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 디버그: 날씨 강제 설정 (사이드바) ---
-st.sidebar.markdown("## 🛠️ Debug: 날씨 강제 설정")
+st.sidebar.markdown("## 🛠️ Debug")
 debug_weather = st.sidebar.selectbox(
     "테스트용 날씨 입력",
     ["(API 사용)", "Clear", "Rainy", "Snowy", "Cloudy", "Windy", "Stormy", "Hot", "Cold"],
@@ -194,6 +194,52 @@ with col_weather_info:
     weather_text = current_weather_description if current_weather_description in mapping else "Clear"
     weather_video = mapping[weather_text] 
     st.session_state["weather_text"] = weather_text
+
+    default_col = "#000000"
+
+    color_map = {
+        "Rainy": "#FFFFFF",
+        "Stormy": "#FFFFFF",
+        "Cold":  "#FFFFFF",
+        "Snowy": "#CCCCCC",
+    }
+
+    col = color_map.get(weather_text, default_col)
+
+    st.markdown(f"""
+    <style>
+    h1, h2, h3,
+    .st-labeled > label {{
+        color: {col} !important;
+    }}
+
+    div[data-testid="stMarkdownContainer"] p {{
+        color: {col} !important;
+    }}
+
+    [data-testid="stSidebar"] button,
+    [data-testid="stSidebar"] div[role="button"],
+    [data-testid="stSidebar"] span {{
+        color: {col} !important;
+    }}
+
+    .weather-content h3, p {{
+        color: #000000 !important;
+    }}
+
+    .music-card p,
+    .music-info-box .artist-name,
+    .music-info-box .track-title,
+    .music-tags-box .tags-text {{
+        color: #000000 !important;
+    }}
+
+    .weather-content {{
+        position: relative !important;
+        z-index: 1 !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 
     ani_map = {
         "Clear" : animations.clear_html,
