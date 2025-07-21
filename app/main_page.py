@@ -223,7 +223,8 @@ with col_weather_info:
         color: {col} !important;
     }}
 
-    .weather-content h3, p {{
+    div.weather-content p,
+    div.weather-content * {{
         color: #000000 !important;
     }}
 
