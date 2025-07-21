@@ -8,8 +8,8 @@ from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from airflow.models import Variable
 import uuid
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+#from sklearn.feature_extraction.text import TfidfVectorizer
+#from sklearn.metrics.pairwise import cosine_similarity
 from .bbc_weather import get_bbc_seoul_weather_summary
 from .tagged_tracks_with_lyrics import get_tracks_with_lyrics_by_tag
 

@@ -8,6 +8,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from etl.weather_etl import fetch_weather_data, upload_to_s3, copy_to_redshift
+from etl.slack_alert import slack_alert
 
 COORDINATES_PATH = '/opt/airflow/data/coordinates.csv'
 WEATHER_API_KEY =  Variable.get("WEATHER_API_KEY")
@@ -18,7 +19,8 @@ AWS_SECRET_ACCESS_KEY = Variable.get("S3_SECRET_KEY")
 default_args = {
     'owner': 'airflow',
     'retries': 1,
-    'retry_delay': timedelta(minutes=5)
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback' : slack_alert
 }
 
 with DAG(

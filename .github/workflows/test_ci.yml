@@ -30,9 +30,29 @@ jobs:
       - name: Wait for Airflow to initialize
         run: sleep 30
 
-      - name: Test DAG parsing
-        run: docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+      - name: Set dummy Airflow Variables
+        run: |
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver bash -c "
+            airflow variables set WEATHER_API_KEY 'dummy-weather-key' &&
+            airflow variables set S3_BUCKET_NAME 'dummy-bucket' &&
+            airflow variables set S3_ACCESS_KEY 'dummy-access-key' &&
+            airflow variables set S3_SECRET_KEY 'dummy-secret-key' &&
+            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
+            airflow variables set LASTFM_API_KEY 'dummy'
+          "
+      - name: Check DAG import errors
+        run: |
+          echo "airflow dags list"
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+          echo "DAG import errors (if any):"
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors > dag_error.log || true
+          cat dag_error.log
 
+          if grep -q "Traceback" dag_error.log; then
+            echo "❌ DAG import error detected"
+            exit 1
+          fi
+ 
       - name: Shut down Airflow containers
         if: always()
         run: docker compose -f docker-compose_git.yml down
