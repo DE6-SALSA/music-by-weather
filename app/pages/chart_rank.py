@@ -46,7 +46,7 @@ def load_or_initialize_data():
 def show_chart_rank_page():
     weather_text = st.session_state.get("weather_text", None)
     if not weather_text:
-        weather_text = "Clear" # 기본값
+        weather_text = "Clear" 
     
     anim_map = {
         "Clear":   animations.clear_html,
@@ -59,21 +59,45 @@ def show_chart_rank_page():
         "Cold":    animations.cold_html,
     }
 
-    # 해당 함수 호출
+    # 3) 동적 텍스트 컬러 결정
+    default_col = "#000000"
+    color_map = {
+        "Rainy":  "#FFFFFF",
+        "Stormy": "#FFFFFF",
+        "Cold":   "#FFFFFF",
+        "Snowy":  "#CCCCCC",
+    }
+    col = color_map.get(weather_text, default_col)
+
+    st.markdown(f"""
+    <style>
+    
+    h1, h2, h3, p {{ color: {col} !important; }}
+    
+    .stTextInput label,
+    .stSelectbox label {{ color: {col} !important; }}
+    
+    [data-testid="stSidebarNav"] button,
+    [data-testid="stSidebarNav"] div[role="button"],
+    [data-testid="stSidebarNav"] span {{ color: {col} !important; }}
+    .stLinkButton button {{ color: {col} !important; }}
+
+    .css-0 .stMarkdown {{ position: relative !important; z-index: 1 !important; }}
+    </style>
+    """ , unsafe_allow_html=True)
+
     if weather_text in anim_map:
         st.markdown(anim_map[weather_text](), unsafe_allow_html=True)
 
     st.title("음악 차트 순위")
     st.markdown("---")
 
-    # 데이터 로드 (한 번 조회 후 파일에서 유지)
     df = load_or_initialize_data()
 
     if df.empty:
         st.info("표시할 차트 데이터가 없습니다.")
         return
 
-    # 검색
     search_query = st.text_input("제목, 아티스트, 태그로 검색", "")
     if search_query:
         search_query_lower = search_query.lower()
@@ -87,7 +111,6 @@ def show_chart_rank_page():
         st.warning("검색 결과가 없습니다.")
         return
 
-    # 페이지네이션
     total_items = len(df)
     total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
     if 'current_page' not in st.session_state:
@@ -111,7 +134,6 @@ def show_chart_rank_page():
 
     st.markdown("---")
 
-    # 테이블 헤더
     header_cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
     header_cols[0].write("**순위**")
     header_cols[1].write("**커버**")
@@ -122,15 +144,12 @@ def show_chart_rank_page():
     header_cols[6].write("**YouTube 링크**")
     header_cols[7].write("**Spotify 링크**")
 
-    # 데이터 행
     for _, row in display_df.iterrows():
         actual_rank = row['rank']
         cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
 
-        # 순위
         cols[0].write(f"**{actual_rank}**")
 
-        # 앨범 커버
         if row['image_url']:
             cols[1].image(row['image_url'], width=60)
         else:
@@ -147,30 +166,24 @@ def show_chart_rank_page():
                 unsafe_allow_html=True
             )
 
-        # 제목
         if row['track_url']:
             cols[2].markdown(f"[{row['title']}]({row['track_url']})")
         else:
             cols[2].write(row['title'])
 
-        # 아티스트
         if row['artist_url']:
             cols[3].markdown(f"[{row['artist']}]({row['artist_url']})")
         else:
             cols[3].write(row['artist'])
 
-        # 재생 수
         cols[4].write(f"{row['play_cnt']:,}")
 
-        # 리스너 수
         cols[5].write(f"{row['listener_cnt']:,}")
 
-        # Youtube 링크
         with cols[6]:
             youtube_url = f"https://www.youtube.com/results?search_query={row['artist']}+{row['title']}"
             st.link_button("YouTube", youtube_url, help="YouTube에서 듣기")
 
-        # Spotify 링크
         with cols[7]:
             spoitify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
             st.link_button("Spoitify", spoitify_url, help="Spotify에서 듣기")
