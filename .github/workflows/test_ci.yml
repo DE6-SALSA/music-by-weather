@@ -40,24 +40,19 @@ jobs:
             airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
             airflow variables set LASTFM_API_KEY 'dummy'
           "
-
       - name: Check DAG import errors
         run: |
-          echo "Checking DAG import errors..."
+          echo "airflow dags list"
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+          echo "DAG import errors (if any):"
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors > dag_error.log || true
+          cat dag_error.log
 
-          output=$(docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors)
-          echo "$output"
-
-          error_count=$(echo "$output" | grep -c "Traceback")
-
-          if [ "$error_count" -gt 0 ]; then
-            echo "❌ Found $error_count DAG import error(s). Failing CI."
+          if grep -q "Traceback" dag_error.log; then
+            echo "❌ DAG import error detected"
             exit 1
-          else
-            echo "No DAG import errors found."
           fi
-
-   
+ 
       - name: Test DAG parsing
         run: |
           echo "airflow dags list"
