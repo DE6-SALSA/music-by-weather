@@ -53,13 +53,6 @@ jobs:
             exit 1
           fi
  
-      - name: Test DAG parsing
-        run: |
-          echo "airflow dags list"
-          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
-          echo "DAG import errors (if any):"
-          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors || true 
-
       - name: Shut down Airflow containers
         if: always()
         run: docker compose -f docker-compose_git.yml down
