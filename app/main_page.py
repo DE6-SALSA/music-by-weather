@@ -26,6 +26,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- 디버그: 날씨 강제 설정 (사이드바) ---
+st.sidebar.markdown("## 🛠️ Debug: 날씨 강제 설정")
+debug_weather = st.sidebar.selectbox(
+    "테스트용 날씨 입력",
+    ["(API 사용)", "Clear", "Rainy", "Snowy", "Cloudy", "Windy", "Stormy", "Hot", "Cold"],
+    index=0
+)
+
 # --- Streamlit 앱의 타이틀 ---
 st.markdown("<h1>Weatherify</h1>", unsafe_allow_html=True)
 st.markdown("<p>날씨와 음악의 완벽한 조화 🎶</p>", unsafe_allow_html=True)
@@ -153,42 +161,39 @@ with col_weather_info:
     weather_data = get_weather_data_from_api(selected_level1, selected_level2)
     current_weather_description = weather_data.get("description", "")
 
-    weather_box_background_color = "#FFFFFF"
-    weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1779/1779940.png"
-    weather_text = weather_data.get("description", "N/A").capitalize()
+    
+    # weather_text = weather_data.get("description", "N/A").capitalize() # 기본 날씨 텍스트
+    # text_weather_for_weather_box = "#000000"
 
-    if "Clear" in current_weather_description:
-        weather_icon_image = "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExb2t1cnplMzdyZHZjZmt6M3RicnA1a2g0OWJzYnV5aWtjc2MwY2k4aiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BmfHlDpPWJy899dy62/giphy.gif"
-        weather_text = "Clear"
-        text_color_for_weather_box = "#424242" 
-    elif "Rainy" in current_weather_description:
-        weather_icon_image = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4eWJxaHlsMG4zaHM1Njl4bjltNHlmcG95Y2x3Z2dmdG1lZmFqYiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ZE6hLh4YmbZvfIx4Qu/giphy.gif"
-        weather_text = "Rainy"
-        text_color_for_weather_box = "#CFD8DC" 
-    elif "Snowy" in current_weather_description:
-        weather_icon_image = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMG94a3FlYno3aXVhb2c1aDNyZmp0dGU1cWl4bzhqdHNubGtjejJ4YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ZwuRBcL7qJkLQX7kXE/giphy.gif"
-        weather_text = "Snowy"
-        text_color_for_weather_box = "#424242" 
-    elif "Cloudy" in current_weather_description:
-        weather_icon_image = "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3dwZWdrMnhhZ2Nwd3AxYzh1bnJwaWg0aHMxMWsxdmU5Z2xyNTJ0NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Ef74CyYmtqf31rd1IQ/giphy.gif"
-        weather_text = "Cloudy"
-        text_color_for_weather_box = "#424242" 
-    elif "Stormy" in current_weather_description:
-        weather_icon_image = "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExYjl4ZnJhYTJmejN3cjZqM2hlOWc4YjA1OXNsajUyaWJnYWExbzNrcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xUOwGoNa2uX6M170d2/giphy.gif"
-        weather_text = "Stormy"
-        text_color_for_weather_box = "#CFD8DC" 
-    elif "Hot" in current_weather_description:
-        weather_icon_image = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeGs4bjRuMzh4MW8xMG9kY29weDhxMWZvb3RpbGtlbnA2dmZyYThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5qlnl8qqLVekKaZaKC/giphy.gif"
-        weather_text = "Hot"
-        text_color_for_weather_box = "#FFFFFF" 
-    elif "Cold" in current_weather_description:
-        weather_icon_image = "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbGE1NWd1a3djcG5oMGFjMnU5YjY1Zzd4NWl6OHh3cmNsZWc1ZGNtdiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/Z8RJBNg2dwkc8yZum8/giphy.gif"
-        weather_text = "Cold"
-        text_color_for_weather_box = "#424242" 
-    else: 
-        weather_icon_image = "https://cdn-icons-png.flaticon.com/512/1779/1779940.png" 
-        text_color_for_weather_box = "#424242"
-        weather_text = "Clear"  
+    # 디버그 override
+    if debug_weather != "(API 사용)":
+        weather_data = {
+            "description": debug_weather,
+            "temperature": 25,
+            "humidity": 50,
+            "precipitation": 1.2,
+            "wsd": 2.5
+        }
+    else:
+        weather_data = get_weather_data_from_api(selected_level1, selected_level2)
+    
+    weather_box_background_color = "#FFFFFF"
+    current_weather_description = weather_data.get("description", "").capitalize()
+
+    # 비디오 매핑
+    mapping = {
+        "Clear": "https://cdn-icons-mp4.flaticon.com/512/17102/17102813.mp4",
+        "Rainy": "https://cdn-icons-mp4.flaticon.com/512/17102/17102963.mp4",
+        "Snowy": "https://cdn-icons-mp4.flaticon.com/512/17484/17484878.mp4",
+        "Windy": "https://cdn-icons-mp4.flaticon.com/512/17102/17102829.mp4",
+        "Cloudy": "https://cdn-icons-mp4.flaticon.com/512/17102/17102874.mp4",
+        "Stormy": "https://cdn-icons-mp4.flaticon.com/512/17102/17102956.mp4",
+        "Hot": "https://cdn-icons-mp4.flaticon.com/512/17103/17103056.mp4",
+        "Cold": "https://cdn-icons-mp4.flaticon.com/512/17103/17103071.mp4"
+    }
+
+    weather_text = current_weather_description if current_weather_description in mapping else "Clear"
+    weather_video = mapping[weather_text] 
 
     st.session_state["weather_text"] = weather_text
 
@@ -212,7 +217,7 @@ with col_weather_info:
             <div class='weather-content' style='background-color: {weather_box_background_color};'>
                 <h3 style='color: #424242; text-align: center; margin-bottom: 10px;'>{selected_level1} {selected_level2}</h3>
                 <div class='weather-display'>
-                    <img src="{weather_icon_image}" alt="{weather_text}" class='weather-icon'>
+                    <video src="{weather_video}" autoplay loop muted style="width:100px; height:100px;"></video>
                     <span class='temperature' style='color: #424242;'>{temperature}°C</span>
                 </div>
                 <p class='weather-description'>{weather_text}</p>
