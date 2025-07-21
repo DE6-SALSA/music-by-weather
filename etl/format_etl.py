@@ -50,11 +50,15 @@ def save_parquet_to_s3(**kwargs):
     enriched = ti.xcom_pull(key='enriched_tracks')
     df = pd.DataFrame(enriched, columns=COLUMNS)
 
+    if 'date' in df.columns:
+        df['date'] = pd.to_datetime(df['date'], format='%Y%m%d').dt.strftime('%Y-%m-%d')
+
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     filename = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.parquet"
     local_path = f"/tmp/{filename}"
+
     table = pa.Table.from_pandas(df)
-    pq.write_table(table, local_path)
+    pq.write_table(table, local_path, compression='snappy')
 
     s3_key = f"format_data/parquet/{filename}"
     S3Hook(aws_conn_id='aws_s3_conn').load_file(
@@ -67,7 +71,9 @@ def save_parquet_to_s3(**kwargs):
     ti.xcom_push(key='s3_key_parquet', value=s3_key)
     ti.xcom_push(key='parquet_row_count', value=len(df))
     ti.xcom_push(key='parquet_file_size', value=os.path.getsize(local_path) / 1024**2)
+
     os.remove(local_path)
+
 
 def copy_csv_to_redshift(**kwargs):
     ti = kwargs['ti']
