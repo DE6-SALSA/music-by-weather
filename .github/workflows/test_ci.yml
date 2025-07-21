@@ -41,7 +41,7 @@ jobs:
             airflow variables set LASTFM_API_KEY 'dummy'
           "
 
-      - name: Check DAG import errors and fail if any
+      - name: Check DAG import errors
         run: |
           echo "Checking DAG import errors..."
 
