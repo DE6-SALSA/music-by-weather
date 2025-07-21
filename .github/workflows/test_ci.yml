@@ -37,7 +37,8 @@ jobs:
             airflow variables set S3_BUCKET_NAME 'dummy-bucket' &&
             airflow variables set S3_ACCESS_KEY 'dummy-access-key' &&
             airflow variables set S3_SECRET_KEY 'dummy-secret-key' &&
-            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url'
+            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
+            airflow variables set LASTFM_API_KEY 'dummy'
           "
       
       - name: Test DAG parsing
