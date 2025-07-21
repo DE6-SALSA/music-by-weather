@@ -24,15 +24,17 @@ jobs:
           CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
           echo "changed_dirs=$CHANGED" >> $GITHUB_OUTPUT
 
-      - name: Create missing files in dags or etl if not exist
+      - name: Ensure files exist in dags and etl
         run: |
-          # Check if there are any changes in dags or etl directories
+          # Check if there are any changes in the dags or etl directories
           if [[ " ${CHANGED[@]} " =~ " dags " ]]; then
             for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^dags/'); do
               if [[ ! -f "$file" ]]; then
-                echo "Creating missing file: $file"
-                # You can customize this with any default content
-                echo "# Default content" > "$file"
+                echo "File $file does not exist in the dags directory, creating or copying it."
+                # Here you can copy from a backup or create the file
+                cp "backup/$file" "$file"
+                # Alternatively, if no backup exists, you can create an empty file
+                # touch "$file"
               fi
             done
           fi
@@ -40,9 +42,11 @@ jobs:
           if [[ " ${CHANGED[@]} " =~ " etl " ]]; then
             for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^etl/'); do
               if [[ ! -f "$file" ]]; then
-                echo "Creating missing file: $file"
-                # You can customize this with any default content
-                echo "# Default content" > "$file"
+                echo "File $file does not exist in the etl directory, creating or copying it."
+                # Here you can copy from a backup or create the file
+                cp "backup/$file" "$file" 
+                # Alternatively, if no backup exists, you can create an empty file
+                # touch "$file"
               fi
             done
           fi
