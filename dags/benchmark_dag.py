@@ -5,7 +5,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME','/opt/airflow'), 'etl'))
 
-from extract_enrich import extract_tracks, enrich_tracks
+from extract_enrich import extract_tracks, enrich_with_tags
 from format_etl import (
     save_csv_to_s3,
     save_parquet_to_s3,
@@ -39,8 +39,8 @@ with dag:
     )
 
     t2 = PythonOperator(
-        task_id='enrich_tracks',
-        python_callable=enrich_tracks
+        task_id='enrich_with_tags',
+        python_callable=enrich_with_tags
     )
 
     t3 = PythonOperator(
