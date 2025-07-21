@@ -21,69 +21,34 @@ jobs:
       - name: Detect changed directories
         id: detect
         run: |
-          # Detect changed files using git diff
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | sort -u)
-          echo "changed_files=$CHANGED" >> $GITHUB_OUTPUT
-
-          # Output current branch
-          BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          echo "Current branch: $BRANCH"
-
-          # Output changed directories
-          echo "Changed directories:"
-          for dir in $CHANGED; do
-            echo " - $dir"
-          done
-
-      - name: Ensure files exist in dags and etl
-        run: |
-          for file in $CHANGED; do
-            if [[ "$file" == dags/* || "$file" == etl/* ]]; then
-              if [[ ! -f "$file" ]]; then
-                echo "File $file does not exist in the $file directory, creating it."
-                # Create an empty file or copy it from a backup
-                touch "$file"  # Create an empty file
-                # Optionally, you can copy from a backup location if available:
-                # cp "backup/$file" "$file"
-                
-                # Output copied or created file contents
-                echo "Created file $file with content:"
-                cat "$file"  # Output the file's content
-
-                # Log the directory, branch, and file creation details
-                echo "Changed directory: $file"
-                echo "Current branch: $BRANCH"
-                echo "File content:"
-                cat "$file"
-              fi
-            fi
-          done
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
+          echo "changed_dirs=$CHANGED" >> $GITHUB_OUTPUT
 
       - name: Transfer changed directories to bastion
-        if: steps.detect.outputs.changed_files != ''
+        if: steps.detect.outputs.changed_dirs != ''
         run: |
-          for file in $CHANGED; do
-            if [[ "$file" == dags/* || "$file" == etl/* ]]; then
-              echo "Transferring $file to bastion"
-              rsync -avz --progress --delete \
+          for DIR in ${{ steps.detect.outputs.changed_dirs }}; do
+            if [[ "$DIR" == "dags" || "$DIR" == "etl" ]]; then
+              echo "Transferring $DIR to bastion"
+              rsync -avz --delete \
                 -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
-                "$file" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$file/
+                "$DIR/" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$DIR/
             fi
           done
 
       - name: Sync to private EC2 from bastion
-        if: steps.detect.outputs.changed_files != ''
+        if: steps.detect.outputs.changed_dirs != ''
         run: |
           ssh -i ~/.ssh/ec2_key.pem \
               -o StrictHostKeyChecking=no \
               ec2-user@${{ secrets.BASTION_HOST }} <<'EOF'
-            for file in $CHANGED; do
-              if [ -f ~/temp_$file ]; then
-                echo "Syncing $file to private EC2"
-                rsync -avz --progress --delete \
+            for DIR in dags etl; do
+              if [ -d ~/temp_$DIR ]; then
+                echo "Syncing $DIR to private EC2"
+                rsync -avz --delete \
                   -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
-                  ~/temp_$file/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$file/
-                rm -rf ~/temp_$file/
+                  ~/temp_$DIR/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$DIR/
+                rm -rf ~/temp_$DIR/
               fi
             done
           EOF
