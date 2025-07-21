@@ -1,0 +1,77 @@
+name: CD Workflow
+
+on:
+  workflow_run:
+    workflows: ["dag ci"]  # ci.yml의 name
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}  # CI가 성공했을 때  실행
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Detect changed directories
+        id: detect
+        run: |
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
+          echo "changed_dirs=$CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Ensure files exist in dags and etl
+        run: |
+          if [[ " ${CHANGED[@]} " =~ " dags " ]]; then
+            for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^dags/'); do
+              if [[ ! -f "$file" ]]; then
+                echo "File $file does not exist in the dags directory, creating or copying it."
+                cp "backup/$file" "$file"
+              fi
+            done
+          fi
+          if [[ " ${CHANGED[@]} " =~ " etl " ]]; then
+            for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^etl/'); do
+              if [[ ! -f "$file" ]]; then
+                echo "File $file does not exist in the etl directory, creating or copying it."
+                cp "backup/$file" "$file"
+              fi
+            done
+          fi
+
+      - name: Transfer changed directories to bastion
+        if: steps.detect.outputs.changed_dirs != ''
+        run: |
+          for DIR in ${{ steps.detect.outputs.changed_dirs }}; do
+            if [[ "$DIR" == "dags" || "$DIR" == "etl" ]]; then
+              echo "Transferring $DIR to bastion"
+              rsync -avz --delete \
+                -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+                "$DIR/" ec2-user@${{ secrets.BASTION_HOST }}:~/temp_$DIR/
+            fi
+          done
+
+      - name: Sync to private EC2 from bastion
+        if: steps.detect.outputs.changed_dirs != ''
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem \
+              -o StrictHostKeyChecking=no \
+              ec2-user@${{ secrets.BASTION_HOST }} <<'EOF'
+            for DIR in dags etl; do
+              if [ -d ~/temp_$DIR ]; then
+                echo "Syncing $DIR to private EC2"
+                rsync -avz --delete \
+                  -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
+                  ~/temp_$DIR/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/$DIR/
+                rm -rf ~/temp_$DIR/
+              fi
+            done
+          EOF
