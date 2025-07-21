@@ -35,10 +35,6 @@ services:
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
       - ./dags:/opt/airflow/dags
-<<<<<<< HEAD
-      - ./etl:/opt/airlflow/etl
-=======
       - ./etl:/opt/airflow/etl
->>>>>>> dag_cicd
     command: webserver
 
