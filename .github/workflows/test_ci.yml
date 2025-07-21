@@ -41,14 +41,17 @@ jobs:
             airflow variables set LASTFM_API_KEY 'dummy'
           "
 
-
       - name: Check DAG import errors and fail if any
         run: |
-          echo "📋 Checking DAG import errors..."
-          error_count=$(docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors | grep -c "Traceback")
+          echo "Checking DAG import errors..."
+
+          output=$(docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors)
+          echo "$output"
+
+          error_count=$(echo "$output" | grep -c "Traceback")
 
           if [ "$error_count" -gt 0 ]; then
-            echo "Found $error_count DAG import error(s). Failing CI."
+            echo "❌ Found $error_count DAG import error(s). Failing CI."
             exit 1
           else
             echo "No DAG import errors found."
