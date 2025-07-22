@@ -14,7 +14,7 @@ st.set_page_config(layout="wide", page_title="음악 차트 순위")
 st.markdown("""
 <style>
     [data-testid], [class*="css-"] { background: transparent !important; }
-.stApp, body { background: transparent !important; }
+    .stApp, body { background: transparent !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +46,7 @@ def load_or_initialize_data():
 def show_chart_rank_page():
     weather_text = st.session_state.get("weather_text", None)
     if not weather_text:
-        weather_text = "Clear" 
+        weather_text = "Clear"
     
     anim_map = {
         "Clear":   animations.clear_html,
@@ -59,32 +59,63 @@ def show_chart_rank_page():
         "Cold":    animations.cold_html,
     }
 
-    # 3) 동적 텍스트 컬러 결정
+    # 동적 텍스트 컬러 결정
     default_col = "#000000"
     color_map = {
         "Rainy":  "#FFFFFF",
         "Stormy": "#FFFFFF",
         "Cold":   "#FFFFFF",
-        "Snowy":  "#CCCCCC",
+        "Snowy":  "#FFFFFF",
     }
     col = color_map.get(weather_text, default_col)
 
+    # 링크 색상 동적 설정 (요청된 색상 적용)
+    link_color_map = {
+        "Clear": "#0000FF",
+        "Cloudy": "#0000FF",
+        "Rainy": "#FFFFFF",
+        "Snowy": "#FFFE05",
+        "Cold": "#F58186",
+        "Stormy": "#FFFF00",
+        "Windy": "#560279",
+        "Hot": "#4D56EE"
+    }
+    link_color = link_color_map.get(weather_text, "#000000")  # 기본값은 검정색
+
     st.markdown(f"""
     <style>
-    
-    h1, h2, h3, p {{ color: {col} !important; }}
-    
-    .stTextInput label,
-    .stSelectbox label {{ color: {col} !important; }}
-    
-    [data-testid="stSidebarNav"] button,
-    [data-testid="stSidebarNav"] div[role="button"],
-    [data-testid="stSidebarNav"] span {{ color: {col} !important; }}
-    .stLinkButton button {{ color: {col} !important; }}
+        /* h1, h2, h3, p 태그는 날씨에 따라 동적으로 색상 변경 */
+        h1, h2, h3, p {{ color: {col} !important; }}
 
-    .css-0 .stMarkdown {{ position: relative !important; z-index: 1 !important; }}
+        .stTextInput label,
+        .stSelectbox label {{ color: {col} !important; }}
+        [data-testid="stSidebarNav"] button,
+        [data-testid="stSidebarNav"] div[role="button"],
+        [data-testid="stSidebarNav"] span {{ color: {col} !important; }}
+        
+        /* st.link_button의 텍스트도 날씨에 따라 동적으로 변경 */
+        .stLinkButton button {{ color: {col} !important; }}
+        
+        a {{ color: {link_color} !important; }} /* 일반 링크 색상 동적 설정 */
+        .css-0 .stMarkdown {{ position: relative !important; z-index: 1 !important; }}
+        
+        /* Streamlit 일반 버튼 (이전/다음 페이지)의 텍스트 색상을 항상 검정색으로 설정 (높은 우선순위) */
+        /* data-testid 속성을 사용하여 버튼을 더 정확하게 타겟팅 */
+        div[data-testid^="stButton"] > button {{
+            font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif !important;
+            border-color: black !important;
+            background-color: white !important;
+            color: black !important; /* 버튼 자체의 글자색을 검정으로 */
+        }}
+        div[data-testid^="stButton"] > button:hover {{
+            background-color: #e6e6e6 !important;
+        }}
+        /* 버튼 내부의 모든 요소 (텍스트 포함)의 색상도 검정색으로 강제 */
+        div[data-testid^="stButton"] * {{
+            color: black !important;
+        }}
     </style>
-    """ , unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
     if weather_text in anim_map:
         st.markdown(anim_map[weather_text](), unsafe_allow_html=True)
@@ -135,14 +166,15 @@ def show_chart_rank_page():
     st.markdown("---")
 
     header_cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
-    header_cols[0].write("**순위**")
-    header_cols[1].write("**커버**")
-    header_cols[2].write("**제목**")
-    header_cols[3].write("**아티스트**")
-    header_cols[4].write("**재생 수**")
-    header_cols[5].write("**리스너 수**")
-    header_cols[6].write("**YouTube 링크**")
-    header_cols[7].write("**Spotify 링크**")
+    header_cols[0].markdown(f"<span style='color: {col};'>**순위**</span>", unsafe_allow_html=True)
+    header_cols[1].markdown(f"<span style='color: {col};'>**커버**</span>", unsafe_allow_html=True)
+    header_cols[2].markdown(f"<span style='color: {col};'>**제목**</span>", unsafe_allow_html=True)
+    header_cols[3].markdown(f"<span style='color: {col};'>**아티스트**</span>", unsafe_allow_html=True)
+    header_cols[4].markdown(f"<span style='color: {col};'>**재생 수**</span>", unsafe_allow_html=True)
+    header_cols[5].markdown(f"<span style='color: {col};'>**리스너 수**</span>", unsafe_allow_html=True)
+    header_cols[6].markdown(f"<span style='color: {col};'>**YouTube 링크**</span>", unsafe_allow_html=True)
+    header_cols[7].markdown(f"<span style='color: {col};'>**Spotify 링크**</span>", unsafe_allow_html=True)
+
 
     for _, row in display_df.iterrows():
         actual_rank = row['rank']
@@ -167,12 +199,12 @@ def show_chart_rank_page():
             )
 
         if row['track_url']:
-            cols[2].markdown(f"[{row['title']}]({row['track_url']})")
+            cols[2].markdown(f'<a href="{row["track_url"]}" target="_blank" style="color: {link_color};">{row["title"]}</a>', unsafe_allow_html=True)
         else:
             cols[2].write(row['title'])
 
         if row['artist_url']:
-            cols[3].markdown(f"[{row['artist']}]({row['artist_url']})")
+            cols[3].markdown(f'<a href="{row["artist_url"]}" target="_blank" style="color: {link_color};">{row["artist"]}</a>', unsafe_allow_html=True)
         else:
             cols[3].write(row['artist'])
 
@@ -185,8 +217,8 @@ def show_chart_rank_page():
             st.link_button("YouTube", youtube_url, help="YouTube에서 듣기")
 
         with cols[7]:
-            spoitify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
-            st.link_button("Spoitify", spoitify_url, help="Spotify에서 듣기")
+            spotify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
+            st.link_button("Spotify", spotify_url, help="Spotify에서 듣기")
 
 if __name__ == "__main__":
     show_chart_rank_page()

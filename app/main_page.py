@@ -246,9 +246,11 @@ st.markdown(f"""
     }}
 
     /* 날씨 박스 배경색 (항상 흰색 유지) */
-    .weather-content {{
-        background-color: white;
+    div.weather-content p,
+    div.weather-content * {{
+        color: #000000 !important;
     }}
+    
     /* 날씨 박스 안의 비디오 플레이스홀더 (애니메이션)도 투명하게 설정 */
     .weather-display video {{
         background: transparent !important;
@@ -337,7 +339,7 @@ with col_weather_info:
         
         st.markdown(f"""
             <div class='weather-content' style='background-color: white;'>
-                <h3 style='text-align: center; margin-bottom: 10px;'>{selected_level1} {selected_level2}</h3>
+                <h3 style='text-align: center; margin-bottom: 10px; color: black;'>서울특별시 강남구</h3>
                 <div class='weather-display'>
                     <video src="{weather_video}" autoplay loop muted style="width:100px; height:100px;"></video>
                     <span class='temperature'>{temperature:.1f}°C</span>
