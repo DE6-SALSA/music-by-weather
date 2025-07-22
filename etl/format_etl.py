@@ -19,13 +19,15 @@ AWS_SECRET_ACCESS_KEY = Variable.get("S3_SECRET_KEY")
 
 COLUMNS = [
     "artist", "title", "play_cnt", "listener_cnt",
-    "tag1", "tag2", "tag3", "tag4", "tag5"
+    "tag1", "tag2", "tag3", "tag4", "tag5","created_at"
 ]
 
 def save_csv_to_s3(**kwargs):
     ti = kwargs['ti']
     enriched = ti.xcom_pull(key='enriched_tracks')
-    df = pd.DataFrame(enriched, columns=COLUMNS)
+    df = pd.DataFrame(enriched, columns=COLUMNS[:-1])
+    df["created_at"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    df = df[COLUMNS]
 
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     filename = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.csv"
@@ -45,13 +47,13 @@ def save_csv_to_s3(**kwargs):
     ti.xcom_push(key='csv_file_size', value=os.path.getsize(local_path) / 1024**2)
     os.remove(local_path)
 
+
 def save_parquet_to_s3(**kwargs):
     ti = kwargs['ti']
     enriched = ti.xcom_pull(key='enriched_tracks')
-    df = pd.DataFrame(enriched, columns=COLUMNS)
+    df = pd.DataFrame(enriched, columns=COLUMNS[:-1])
 
-    if 'date' in df.columns:
-        df['date'] = pd.to_datetime(df['date'], format='%Y%m%d').dt.strftime('%Y-%m-%d')
+    df["created_at"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     filename = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.parquet"
@@ -73,6 +75,7 @@ def save_parquet_to_s3(**kwargs):
     ti.xcom_push(key='parquet_file_size', value=os.path.getsize(local_path) / 1024**2)
 
     os.remove(local_path)
+
 
 
 def copy_csv_to_redshift(**kwargs):
