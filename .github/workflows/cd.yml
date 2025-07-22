@@ -1,4 +1,4 @@
-name: Deploy DAG/ETL to private EC2
+name: master cd
 
 on:
   push:
