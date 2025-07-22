@@ -1,6 +1,8 @@
+/* styles.css */
+
 /* General Body and Layout */
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     margin: 0;
     padding: 0;
     background-color: #cdd9e4; 
@@ -9,20 +11,25 @@ body {
 
 .stApp {
     background-color: #cdd9e4; 
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
 }
 
 /* Page Title and Subtitle */
 h1 {
     text-align: center;
-    color: #1c4e80;
-    margin-bottom: 10px;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 3em;
     font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    background: linear-gradient(45deg, #1c4e80, #ff69b4);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 10px;
 }
 
 p {
     text-align: center;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     color: #465c6b;
     font-size: 1.1em;
     margin-bottom: 30px;
@@ -30,6 +37,7 @@ p {
 
 /* Headers (subheader는 이제 박스 외부에 위치) */
 h2, h3 {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     color: #2f4f4f;
     margin-top: 20px; 
     margin-bottom: 10px;
@@ -86,12 +94,14 @@ hr {
 }
 
 .temperature {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 2.5em;
     font-weight: bold;
     color: #333333;
 }
 
 .weather-description {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 1.2em;
     font-weight: bold;
     color: #444444;
@@ -101,6 +111,7 @@ hr {
 }
 
 .weather-detail {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 0.95em;
     color: #555555;
     margin-bottom: 3px;
@@ -156,6 +167,7 @@ hr {
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     color: #DDDDDD;
     font-size: 1.2em;
     font-weight: bold;
@@ -178,6 +190,7 @@ hr {
 }
 
 .artist-name {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 1.1em;
     font-weight: bold;
     color: #333333;
@@ -185,6 +198,7 @@ hr {
 }
 
 .track-title {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 0.95em;
     font-style: italic;
     color: #555555;
@@ -207,6 +221,7 @@ hr {
 }
 
 .music-link-box a {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     text-decoration: none;
     color: #0056b3;
     font-weight: bold;
@@ -221,6 +236,7 @@ hr {
 }
 
 .link-placeholder {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 0.8em;
     color: #777777;
     display: block;
@@ -244,7 +260,9 @@ hr {
     overflow-y: hidden;
     white-space: nowrap;
 }
+
 .tags-text {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 0.8em;
     color: #555555;
     margin: 0;
@@ -254,7 +272,9 @@ hr {
     padding-right: 5px;
 }
 
+/* Streamlit 버튼 */
 .stButton > button {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     font-size: 0.9em;
     padding: 8px 15px;
     border-radius: 10px;
@@ -271,14 +291,18 @@ hr {
     border-color: #256bbd;
 }
 
+/* Streamlit 입력창 */
 .stTextInput > div > div > input {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     border-radius: 5px;
     border: 1px solid #cccccc;
     padding: 10px;
     color: #333333;
 }
 
+/* Streamlit 셀렉트박스 */
 .stSelectbox > div > div > div > div {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     background: transparent !important;
     border-radius: none;
     border: none;
@@ -287,6 +311,7 @@ hr {
 
 /* Info and Warning messages */
 .stAlert {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 20px;
@@ -302,4 +327,10 @@ hr {
     background-color: #ffe0b2;
     color: #e65100;
     border-color: #ff9800;
+}
+
+/* 데이터프레임 스타일 */
+.dataframe, .dataframe th, .dataframe td {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    color: black;
 }
