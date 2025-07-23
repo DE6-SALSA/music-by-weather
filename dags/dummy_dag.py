@@ -22,7 +22,7 @@ default_args = {
 dummy_sizes_mb = [1, 10, 25, 50, 100]
 
 with DAG(
-    dag_id='format_comparison_benchmark',
+    dag_id='dummy_format_comparison_benchmark',
     default_args=default_args,
     start_date=datetime(2025, 7, 23),
     schedule_interval=None,
