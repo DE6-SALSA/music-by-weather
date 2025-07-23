@@ -33,7 +33,7 @@ def generate_dummy_csv_parquet(size_mb: int, **kwargs):
         "tag3": ["jazz"] * rows,
         "tag4": ["metal"] * rows,
         "tag5": ["folk"] * rows,
-        "load_time": [now.strftime('%Y-%m-%d %H:%M:%S')] * rows,
+        "load_time": [now] * rows,
     })
 
     filename_base = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
