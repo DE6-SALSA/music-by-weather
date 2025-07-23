@@ -1,7 +1,12 @@
+import os
+import sys
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from format_benchmark_etl import (
+sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME','/opt/airflow'), 'etl'))
+
+from dummy_benchmark import (
     generate_dummy_csv_parquet,
     upload_to_s3,
     copy_to_redshift,
