@@ -20,6 +20,7 @@ COLUMNS = [
 ]
 
 def generate_dummy_csv_parquet(size_mb: int, **kwargs):
+    
     rows = (size_mb * 1024 * 1024) // 150
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     df = pd.DataFrame({
