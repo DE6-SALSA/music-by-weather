@@ -5,7 +5,7 @@ from format_benchmark_etl import (
     generate_dummy_csv_parquet,
     upload_to_s3,
     copy_to_redshift,
-    record_metrics
+    record_metrics,
 )
 
 default_args = {
@@ -14,7 +14,7 @@ default_args = {
     'retry_delay': timedelta(minutes=2),
 }
 
-dummy_sizes_mb = [1, 10, 100, 300, 500, 1000] 
+dummy_sizes_mb = [1, 10, 100, 300, 500, 1000]
 
 with DAG(
     dag_id='format_comparison_benchmark',
@@ -26,28 +26,29 @@ with DAG(
 ) as dag:
 
     for size in dummy_sizes_mb:
-        generate = PythonOperator(
-            task_id=f'generate_{size}mb_data',
-            python_callable=generate_dummy_csv_parquet,
-            op_kwargs={'size_mb': size},
-        )
+        for fmt in ['csv', 'parquet']:
+            generate = PythonOperator(
+                task_id=f'generate_{fmt}_{size}mb',
+                python_callable=generate_dummy_csv_parquet,
+                op_kwargs={'size_mb': size, 'format_type': fmt},
+            )
 
-        upload = PythonOperator(
-            task_id=f'upload_{size}mb_to_s3',
-            python_callable=upload_to_s3,
-            op_kwargs={'size_mb': size},
-        )
+            upload = PythonOperator(
+                task_id=f'upload_{fmt}_{size}mb_to_s3',
+                python_callable=upload_to_s3,
+                op_kwargs={'size_mb': size, 'format_type': fmt},
+            )
 
-        copy = PythonOperator(
-            task_id=f'copy_{size}mb_to_redshift',
-            python_callable=copy_to_redshift,
-            op_kwargs={'size_mb': size},
-        )
+            copy = PythonOperator(
+                task_id=f'copy_{fmt}_{size}mb_to_redshift',
+                python_callable=copy_to_redshift,
+                op_kwargs={'size_mb': size, 'format_type': fmt},
+            )
 
-        record = PythonOperator(
-            task_id=f'record_metrics_{size}mb',
-            python_callable=record_metrics,
-            op_kwargs={'size_mb': size},
-        )
+            record = PythonOperator(
+                task_id=f'record_metrics_{fmt}_{size}mb',
+                python_callable=record_metrics,
+                op_kwargs={'size_mb': size, 'format_type': fmt},
+            )
 
-        generate >> upload >> copy >> record
+            generate >> upload >> copy >> record
