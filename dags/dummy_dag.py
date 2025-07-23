@@ -19,7 +19,7 @@ default_args = {
     'retry_delay': timedelta(minutes=2),
 }
 
-dummy_sizes_mb = [1, 10, 100, 300, 500, 1000]
+dummy_sizes_mb = [1, 10, 50, 100, 200]
 
 with DAG(
     dag_id='dummy_format_comparison_benchmark',
