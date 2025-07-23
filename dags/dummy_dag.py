@@ -22,7 +22,7 @@ default_args = {
 dummy_sizes_mb = [1, 10, 50, 100, 200]
 
 with DAG(
-    dag_id='dummy_format_comparison_benchmark',
+    dag_id='format_comparison_benchmark',
     default_args=default_args,
     start_date=datetime(2025, 7, 23),
     schedule_interval=None,
@@ -30,30 +30,34 @@ with DAG(
     tags=['benchmark', 'format'],
 ) as dag:
 
+    previous_task = None
+
     for size in dummy_sizes_mb:
-        for fmt in ['csv', 'parquet']:
-            generate = PythonOperator(
-                task_id=f'generate_{fmt}_{size}mb',
-                python_callable=generate_dummy_csv_parquet,
-                op_kwargs={'size_mb': size, 'format_type': fmt},
-            )
+        generate = PythonOperator(
+            task_id=f'generate_{size}mb_data',
+            python_callable=generate_dummy_csv_parquet,
+            op_kwargs={'size_mb': size},
+        )
 
-            upload = PythonOperator(
-                task_id=f'upload_{fmt}_{size}mb_to_s3',
-                python_callable=upload_to_s3,
-                op_kwargs={'size_mb': size, 'format_type': fmt},
-            )
+        upload = PythonOperator(
+            task_id=f'upload_{size}mb_to_s3',
+            python_callable=upload_to_s3,
+            op_kwargs={'size_mb': size},
+        )
 
-            copy = PythonOperator(
-                task_id=f'copy_{fmt}_{size}mb_to_redshift',
-                python_callable=copy_to_redshift,
-                op_kwargs={'size_mb': size, 'format_type': fmt},
-            )
+        copy = PythonOperator(
+            task_id=f'copy_{size}mb_to_redshift',
+            python_callable=copy_to_redshift,
+            op_kwargs={'size_mb': size},
+        )
 
-            record = PythonOperator(
-                task_id=f'record_metrics_{fmt}_{size}mb',
-                python_callable=record_metrics,
-                op_kwargs={'size_mb': size, 'format_type': fmt},
-            )
+        record = PythonOperator(
+            task_id=f'record_metrics_{size}mb',
+            python_callable=record_metrics,
+            op_kwargs={'size_mb': size},
+        )
 
-            generate >> upload >> copy >> record
+        if previous_task:
+            previous_task >> generate
+        generate >> upload >> copy >> record
+        previous_task = record  # 다음 순서 연결을 위해 저장
