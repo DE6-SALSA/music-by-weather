@@ -1,16 +1,18 @@
-import streamlit as st
-import requests
-import pandas as pd
-import json
 import os
-import animations
+import json
+import math
+import pandas as pd
+import streamlit as st
+from lib import api, theme
 
-FASTAPI_BACKEND_URL = "http://localhost:8000"
+FASTAPI_BACKEND_URL = api.FASTAPI_BASE_URL
 ITEMS_PER_PAGE = 20
-DATA_FILE = "chart_data.json"
+MAX_FETCH = 100
+DATA_FILE = os.path.join(os.path.dirname(__file__), "chart_data.json")
 
 st.set_page_config(layout="wide", page_title="음악 차트 순위")
 
+# Keep background transparent
 st.markdown("""
 <style>
     [data-testid], [class*="css-"] { background: transparent !important; }
@@ -18,207 +20,159 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def get_chart_data():
+
+def _fetch_and_cache_chart() -> pd.DataFrame:
     try:
-        response = requests.get(f"{FASTAPI_BACKEND_URL}/chart_rank")
-        response.raise_for_status()
-        return pd.DataFrame(response.json())
-    except requests.exceptions.ConnectionError:
-        st.error("백엔드 서버에 연결할 수 없습니다. FastAPI 서버가 실행 중인지 확인해주세요.")
-        return pd.DataFrame()
-    except requests.exceptions.RequestException as e:
-        st.error(f"데이터를 가져오는 중 오류가 발생했습니다: {e}")
+        return pd.DataFrame(api.get_chart_rank(limit=MAX_FETCH))
+    except Exception as e:  # pragma: no cover
+        st.error(f"차트 데이터를 불러오는 중 오류: {e}")
         return pd.DataFrame()
 
-def load_or_initialize_data():
+
+def _load_or_init() -> pd.DataFrame:
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding='utf-8') as f:
-            data = json.load(f)
-        return pd.DataFrame(data)
-    else:
-        with st.spinner("차트 데이터를 로드 중입니다..."):
-            df = get_chart_data()
-            if not df.empty:
-                with open(DATA_FILE, "w", encoding='utf-8') as f:
-                    json.dump(df.to_dict(orient='records'), f)
-            return df
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return pd.DataFrame(json.load(f))
+    with st.spinner("차트 데이터를 로드 중입니다..."):
+        df = _fetch_and_cache_chart()
+        if not df.empty:
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(df.to_dict(orient="records"), f)
+        return df
 
-def show_chart_rank_page():
-    weather_text = st.session_state.get("weather_text", None)
-    if not weather_text:
-        weather_text = "Clear"
-    
-    anim_map = {
-        "Clear":   animations.clear_html,
-        "Rainy":   animations.rainy_html,
-        "Snowy":   animations.snowy_html,
-        "Cloudy":  animations.cloudy_html,
-        "Windy":   animations.windy_html,
-        "Stormy":  animations.stormy_html,
-        "Hot":     animations.hot_html,
-        "Cold":    animations.cold_html,
-    }
 
-    # 동적 텍스트 컬러 결정
-    default_col = "#000000"
-    color_map = {
-        "Rainy":  "#FFFFFF",
-        "Stormy": "#FFFFFF",
-        "Cold":   "#FFFFFF",
-        "Snowy":  "#FFFFFF",
-    }
-    col = color_map.get(weather_text, default_col)
+def main():
+    weather_text = st.session_state.get("weather_text", "Clear")
+    header_col = theme.header_color(weather_text)
+    link_col = theme.link_color(weather_text)
 
-    # 링크 색상 동적 설정 (요청된 색상 적용)
-    link_color_map = {
-        "Clear": "#0000FF",
-        "Cloudy": "#0000FF",
-        "Rainy": "#FFFFFF",
-        "Snowy": "#FFFE05",
-        "Cold": "#F58186",
-        "Stormy": "#FFFF00",
-        "Windy": "#560279",
-        "Hot": "#4D56EE"
-    }
-    link_color = link_color_map.get(weather_text, "#000000")  # 기본값은 검정색
-
-    st.markdown(f"""
-    <style>
-        /* h1, h2, h3, p 태그는 날씨에 따라 동적으로 색상 변경 */
-        h1, h2, h3, p {{ color: {col} !important; }}
-
-        .stTextInput label,
-        .stSelectbox label {{ color: {col} !important; }}
-        [data-testid="stSidebarNav"] button,
-        [data-testid="stSidebarNav"] div[role="button"],
-        [data-testid="stSidebarNav"] span {{ color: {col} !important; }}
-        
-        /* st.link_button의 텍스트도 날씨에 따라 동적으로 변경 */
-        .stLinkButton button {{ color: {col} !important; }}
-        
-        a {{ color: {link_color} !important; }} /* 일반 링크 색상 동적 설정 */
-        .css-0 .stMarkdown {{ position: relative !important; z-index: 1 !important; }}
-        
-        /* Streamlit 일반 버튼 (이전/다음 페이지)의 텍스트 색상을 항상 검정색으로 설정 (높은 우선순위) */
-        /* data-testid 속성을 사용하여 버튼을 더 정확하게 타겟팅 */
-        div[data-testid^="stButton"] > button {{
-            font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif !important;
-            border-color: black !important;
-            background-color: white !important;
-            color: black !important; /* 버튼 자체의 글자색을 검정으로 */
-        }}
-        div[data-testid^="stButton"] > button:hover {{
-            background-color: #e6e6e6 !important;
-        }}
-        /* 버튼 내부의 모든 요소 (텍스트 포함)의 색상도 검정색으로 강제 */
-        div[data-testid^="stButton"] * {{
-            color: black !important;
-        }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    if weather_text in anim_map:
-        st.markdown(anim_map[weather_text](), unsafe_allow_html=True)
+    st.markdown(theme.weather_animation_html(weather_text), unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <style>
+            h1, h2, h3, p {{ color: {header_col} !important; }}
+            .stTextInput label, .stSelectbox label {{ color: {header_col} !important; }}
+            a {{ color: {link_col} !important; }}
+            div[data-testid^="stButton"] > button {{
+                font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif !important;
+                border-color: black !important; background-color: white !important; color: black !important;
+            }}
+            div[data-testid^="stButton"] > button:hover {{ background-color: #e6e6e6 !important; }}
+            div[data-testid^="stButton"] * {{ color: black !important; }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.title("음악 차트 순위")
     st.markdown("---")
 
-    df = load_or_initialize_data()
-
+    df = _load_or_init()
     if df.empty:
         st.info("표시할 차트 데이터가 없습니다.")
         return
 
-    search_query = st.text_input("제목, 아티스트, 태그로 검색", "")
-    if search_query:
-        search_query_lower = search_query.lower()
+    query = st.text_input("제목, 아티스트, 태그로 검색", "")
+    if query:
+        q = query.lower()
         df = df[
-            df['title'].str.lower().str.contains(search_query_lower) |
-            df['artist'].str.lower().str.contains(search_query_lower) |
-            df['tags'].apply(lambda tags: any(search_query_lower in t.lower() for t in tags))
+            df["title"].str.lower().str.contains(q)
+            | df["artist"].str.lower().str.contains(q)
+            | df["tags"].apply(lambda tags: any(q in t.lower() for t in tags))
         ]
+        if df.empty:
+            st.warning("검색 결과가 없습니다.")
+            return
+        
+        if "last_query" not in st.session_state or st.session_state.last_query != query:
+            st.session_state.current_page = 1
+        st.session_state.last_query = query
 
-    if df.empty:
-        st.warning("검색 결과가 없습니다.")
-        return
 
     total_items = len(df)
-    total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
-    if 'current_page' not in st.session_state:
+    total_pages = max(1, math.ceil(total_items / ITEMS_PER_PAGE))
+
+    if "current_page" not in st.session_state:
         st.session_state.current_page = 1
+
+    def _set_page(new_page: int):
+        st.session_state.current_page = max(1, min(total_pages, new_page))
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("이전 페이지", disabled=(st.session_state.current_page == 1)):
-            st.session_state.current_page -= 1
+        if st.button("이전 페이지", disabled=st.session_state.current_page <= 1):
+            _set_page(st.session_state.current_page - 1)
             st.rerun()
     with col2:
         st.markdown(f"<h3 style='text-align: center;'>페이지 {st.session_state.current_page} / {total_pages}</h3>", unsafe_allow_html=True)
     with col3:
-        if st.button("다음 페이지", disabled=(st.session_state.current_page == total_pages)):
-            st.session_state.current_page += 1
+        if st.button("다음 페이지", disabled=st.session_state.current_page >= total_pages):
+            _set_page(st.session_state.current_page + 1)
             st.rerun()
 
-    start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
-    end_idx = start_idx + ITEMS_PER_PAGE
-    display_df = df.iloc[start_idx:end_idx].reset_index(drop=True)
+    jump_col = st.columns([1, 8, 1])[2]
+    with jump_col:
+        go_to = st.selectbox(
+            "페이지 이동",
+            options=list(range(1, total_pages + 1)),
+            index=st.session_state.current_page - 1,
+            label_visibility="collapsed",
+            key="page_select",
+        )
+        if go_to != st.session_state.current_page:
+            _set_page(go_to)
+            st.rerun()
+
+    start = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
+    end = start + ITEMS_PER_PAGE
+    display_df = df.iloc[start:end].reset_index(drop=True)
 
     st.markdown("---")
 
-    header_cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
-    header_cols[0].markdown(f"<span style='color: {col};'>**순위**</span>", unsafe_allow_html=True)
-    header_cols[1].markdown(f"<span style='color: {col};'>**커버**</span>", unsafe_allow_html=True)
-    header_cols[2].markdown(f"<span style='color: {col};'>**제목**</span>", unsafe_allow_html=True)
-    header_cols[3].markdown(f"<span style='color: {col};'>**아티스트**</span>", unsafe_allow_html=True)
-    header_cols[4].markdown(f"<span style='color: {col};'>**재생 수**</span>", unsafe_allow_html=True)
-    header_cols[5].markdown(f"<span style='color: {col};'>**리스너 수**</span>", unsafe_allow_html=True)
-    header_cols[6].markdown(f"<span style='color: {col};'>**YouTube 링크**</span>", unsafe_allow_html=True)
-    header_cols[7].markdown(f"<span style='color: {col};'>**Spotify 링크**</span>", unsafe_allow_html=True)
-
+    headers = ["순위", "커버", "제목", "아티스트", "재생 수", "리스너 수", "YouTube 링크", "Spotify 링크"]
+    widths = [0.5, 1, 2.5, 1.5, 1, 1, 1, 1]
+    header_cols = st.columns(widths)
+    for c, h in zip(header_cols, headers):
+        c.markdown(f"<span style='color: {header_col};'>**{h}**</span>", unsafe_allow_html=True)
 
     for _, row in display_df.iterrows():
-        actual_rank = row['rank']
-        cols = st.columns([0.5, 1, 2.5, 1.5, 1, 1, 1, 1])
-
-        cols[0].write(f"**{actual_rank}**")
-
-        if row['image_url']:
-            cols[1].image(row['image_url'], width=60)
+        cols = st.columns(widths)
+        cols[0].write(f"**{row['rank']}**")
+        if row["image_url"]:
+            cols[1].image(row["image_url"], width=60)
         else:
             cols[1].markdown(
                 """
-                <div style="
-                    width: 60px;
-                    height: 60px;
-                    background-color: black;
-                    border-radius: 4px;
-                    display: inline-block;
-                "></div>
+                <div style="width: 60px;height: 60px;background-color: black;border-radius: 4px;display: inline-block;"></div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
-        if row['track_url']:
-            cols[2].markdown(f'<a href="{row["track_url"]}" target="_blank" style="color: {link_color};">{row["title"]}</a>', unsafe_allow_html=True)
+        if row["track_url"]:
+            cols[2].markdown(
+                f'<a href="{row["track_url"]}" target="_blank" style="color: {link_col};">{row["title"]}</a>',
+                unsafe_allow_html=True,
+            )
         else:
-            cols[2].write(row['title'])
+            cols[2].write(row["title"])
 
-        if row['artist_url']:
-            cols[3].markdown(f'<a href="{row["artist_url"]}" target="_blank" style="color: {link_color};">{row["artist"]}</a>', unsafe_allow_html=True)
+        if row["artist_url"]:
+            cols[3].markdown(
+                f'<a href="{row["artist_url"]}" target="_blank" style="color: {link_col};">{row["artist"]}</a>',
+                unsafe_allow_html=True,
+            )
         else:
-            cols[3].write(row['artist'])
+            cols[3].write(row["artist"])
 
         cols[4].write(f"{row['play_cnt']:,}")
-
         cols[5].write(f"{row['listener_cnt']:,}")
 
-        with cols[6]:
-            youtube_url = f"https://www.youtube.com/results?search_query={row['artist']}+{row['title']}"
-            st.link_button("YouTube", youtube_url, help="YouTube에서 듣기")
+        youtube_url = f"https://www.youtube.com/results?search_query={row['artist']}+{row['title']}"
+        cols[6].link_button("YouTube", youtube_url, help="YouTube에서 듣기")
 
-        with cols[7]:
-            spotify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
-            st.link_button("Spotify", spotify_url, help="Spotify에서 듣기")
+        spotify_url = f"https://open.spotify.com/search/{row['artist']}%20{row['title']}"
+        cols[7].link_button("Spotify", spotify_url, help="Spotify에서 듣기")
+
 
 if __name__ == "__main__":
-    show_chart_rank_page()
+    main()
