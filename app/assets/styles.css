@@ -278,17 +278,16 @@ hr {
     font-size: 0.9em;
     padding: 8px 15px;
     border-radius: 10px;
-    border: 1px solid #2F80ED;
-    background-color: #2F80ED;
-    color: white;
+    border: none;
+    background: transparent;
+    color: rgb(0, 0, 0);
     cursor: pointer;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out;
     margin-left: 10px;
 }
 
 .stButton > button:hover {
-    background-color: #256bbd;
-    border-color: #256bbd;
+    background-color: transparent;
 }
 
 /* Streamlit 입력창 */
