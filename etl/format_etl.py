@@ -10,7 +10,6 @@ import pyarrow.parquet as pq
 from airflow.models import Variable
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-##test
 
 API_KEY = Variable.get("LASTFM_API_KEY")
 S3_BUCKET = Variable.get("S3_BUCKET_NAME")
@@ -19,14 +18,14 @@ AWS_SECRET_ACCESS_KEY = Variable.get("S3_SECRET_KEY")
 
 COLUMNS = [
     "artist", "title", "play_cnt", "listener_cnt",
-    "tag1", "tag2", "tag3", "tag4", "tag5","created_at"
+    "tag1", "tag2", "tag3", "tag4", "tag5","load_time"
 ]
 
 def save_csv_to_s3(**kwargs):
     ti = kwargs['ti']
     enriched = ti.xcom_pull(key='enriched_tracks')
     df = pd.DataFrame(enriched, columns=COLUMNS[:-1])
-    df["created_at"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    df["load_time"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     df = df[COLUMNS]
 
     now = datetime.now(ZoneInfo("Asia/Seoul"))
@@ -53,7 +52,7 @@ def save_parquet_to_s3(**kwargs):
     enriched = ti.xcom_pull(key='enriched_tracks')
     df = pd.DataFrame(enriched, columns=COLUMNS[:-1])
 
-    df["created_at"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    df["load_time"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     filename = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.parquet"
