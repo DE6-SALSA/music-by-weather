@@ -75,13 +75,14 @@ def upload_to_s3(size_mb: int, **kwargs):
     os.remove(parquet_path)
 
 def copy_to_redshift(size_mb: int, **kwargs):
-    print(f"[DEBUG] size_mb: {size_mb}")
-    print(f"[DEBUG] CSV key: {csv_key}")
-    print(f"[DEBUG] Parquet key: {parquet_key}")
     ti = kwargs['ti']
     csv_key = ti.xcom_pull(key=f'{size_mb}_csv_key')
     parquet_key = ti.xcom_pull(key=f'{size_mb}_parquet_key')
 
+    print(f"[DEBUG] size_mb: {size_mb}")
+    print(f"[DEBUG] CSV key: {csv_key}")
+    print(f"[DEBUG] Parquet key: {parquet_key}")
+    
     pg = PostgresHook(postgres_conn_id='redshift_conn')
 
     csv_sql = f"""
