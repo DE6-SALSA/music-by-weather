@@ -52,13 +52,29 @@ def save_parquet_to_s3(**kwargs):
     enriched = ti.xcom_pull(key='enriched_tracks')
     df = pd.DataFrame(enriched, columns=COLUMNS[:-1])
 
-    df["load_time"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    df["load_time"] = pd.to_datetime(datetime.now())
+    df["play_cnt"] = df["play_cnt"].astype("int32")
+    df["listener_cnt"] = df["listener_cnt"].astype("int32")
+    df = df[COLUMNS]
 
     now = datetime.now(ZoneInfo("Asia/Seoul"))
     filename = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}.parquet"
     local_path = f"/tmp/{filename}"
 
-    table = pa.Table.from_pandas(df)
+    schema = pa.schema([
+        ("artist", pa.string()),
+        ("title", pa.string()),
+        ("play_cnt", pa.int32()),
+        ("listener_cnt", pa.int32()),
+        ("tag1", pa.string()),
+        ("tag2", pa.string()),
+        ("tag3", pa.string()),
+        ("tag4", pa.string()),
+        ("tag5", pa.string()),
+        ("load_time", pa.timestamp('ns')),
+    ])
+
+    table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
     pq.write_table(table, local_path, compression='snappy')
 
     s3_key = f"format_data/parquet/{filename}"
@@ -74,7 +90,6 @@ def save_parquet_to_s3(**kwargs):
     ti.xcom_push(key='parquet_file_size', value=os.path.getsize(local_path) / 1024**2)
 
     os.remove(local_path)
-
 
 
 def copy_csv_to_redshift(**kwargs):
