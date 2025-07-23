@@ -20,9 +20,9 @@ COLUMNS = [
 ]
 
 def generate_dummy_csv_parquet(size_mb: int, **kwargs):
-    
     rows = (size_mb * 1024 * 1024) // 150
     now = datetime.now(ZoneInfo("Asia/Seoul"))
+
     df = pd.DataFrame({
         "artist": ["dummy_artist"] * rows,
         "title": ["dummy_title"] * rows,
@@ -36,6 +36,8 @@ def generate_dummy_csv_parquet(size_mb: int, **kwargs):
         "load_time": [now] * rows,
     })
 
+    df["load_time"] = df["load_time"].dt.tz_localize(None)
+
     filename_base = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
     csv_path = f"/tmp/{filename_base}.csv"
     parquet_path = f"/tmp/{filename_base}.parquet"
@@ -47,6 +49,7 @@ def generate_dummy_csv_parquet(size_mb: int, **kwargs):
     ti.xcom_push(key=f'{size_mb}_csv_file', value=csv_path)
     ti.xcom_push(key=f'{size_mb}_parquet_file', value=parquet_path)
     ti.xcom_push(key=f'{size_mb}_row_count', value=len(df))
+
 
 def upload_to_s3(size_mb: int, **kwargs):
     ti = kwargs['ti']
