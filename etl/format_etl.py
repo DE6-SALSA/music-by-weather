@@ -99,7 +99,7 @@ def copy_parquet_to_redshift(**kwargs):
     start = time.time()
 
     sql = f"""
-        COPY raw_data.data_parquet ({', '.join(COLUMNS)})
+        COPY raw_data.data_parquet
         FROM 's3://{S3_BUCKET}/{s3_key}'
         ACCESS_KEY_ID '{AWS_ACCESS_KEY_ID}'
         SECRET_ACCESS_KEY '{AWS_SECRET_ACCESS_KEY}'
@@ -108,6 +108,7 @@ def copy_parquet_to_redshift(**kwargs):
     PostgresHook(postgres_conn_id='redshift_conn').run(sql)
     elapsed = round(time.time() - start, 2)
     ti.xcom_push(key='parquet_copy_time', value=elapsed)
+
 
 def record_csv_result(**kwargs):
     ti = kwargs['ti']
