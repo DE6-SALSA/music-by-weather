@@ -35,8 +35,10 @@ def generate_dummy_csv_parquet(size_mb: int, **kwargs):
         "tag5": ["folk"] * rows,
         "load_time": [now] * rows,
     })
-
-    df["load_time"] = df["load_time"].apply(lambda x: x.replace(tzinfo=None))
+    
+    df["play_cnt"] = df["play_cnt"].astype("int32")
+    df["listener_cnt"] = df["listener_cnt"].astype("int32")
+    df["load_time"] = pd.to_datetime(df["load_time"]).dt.tz_localize(None)
 
     filename_base = f"track_data_{now:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
     csv_path = f"/tmp/{filename_base}.csv"
