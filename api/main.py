@@ -16,11 +16,7 @@ origins = [
     "http://localhost",
     "http://localhost:8501",
     "http://127.0.0.1:8501",
-<<<<<<< Updated upstream
-    "http://15.165.108.160:8501"
-=======
-    "http://15.165.108.160:8501", # 도메인이 있다면 추가 
->>>>>>> Stashed changes
+    "http://15.165.108.160:8501",
 ]
 
 app.add_middleware(
