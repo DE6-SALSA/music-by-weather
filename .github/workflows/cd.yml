@@ -1,4 +1,4 @@
-name: master cd
+name: develop api cd
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
         if: steps.detect.outputs.api_changed == 'true'
         run: |
           rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
-            dags/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_api/
+            api/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_api/
 
 
       - name: From bastion, sync to private EC2
