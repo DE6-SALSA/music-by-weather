@@ -10,11 +10,8 @@ from db import get_redshift_connection_internal
 from constants import WEATHER_TO_TAGS_MAP
 from utils import collect_tags
 
-try:
-    LASTFM_API_KEY = Variable.get("LASTFM_API_KEY2")
-except:
-    raise RuntimeError("AIRFLOW VARIABLE LAST.FM API_KEY2가 설정되어 있지 않습니다.")
 
+LASTFM_API_KEY ="65c7558dc7abd9c3dc19c3c74b616c21"
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
 
 # --- 날씨 조회 ---
