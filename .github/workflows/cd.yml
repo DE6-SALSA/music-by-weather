@@ -42,4 +42,4 @@ jobs:
           ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.BASTION_HOST }} << 'EOF'
           rsync -avz --delete -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
           /home/ec2-user/temp_api/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/api/
-        EOF
+          EOF
