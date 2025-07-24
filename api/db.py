@@ -1,7 +1,7 @@
 import psycopg2
 from fastapi import HTTPException
 
-AIRFLOW_DB_HOST = "airflow-db"
+AIRFLOW_DB_HOST = "postgres"
 AIRFLOW_DB_PORT = 5432
 AIRFLOW_DB_NAME = "airflow"
 AIRFLOW_DB_USER = "airflow"
