@@ -1,6 +1,3 @@
-from dotenv import load_dotenv, find_dotenv
-load_dotenv(find_dotenv())  
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,7 +16,11 @@ origins = [
     "http://localhost",
     "http://localhost:8501",
     "http://127.0.0.1:8501",
+<<<<<<< Updated upstream
     "http://15.165.108.160:8501"
+=======
+    "http://15.165.108.160:8501", # 도메인이 있다면 추가 
+>>>>>>> Stashed changes
 ]
 
 app.add_middleware(
@@ -38,4 +39,4 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -4,12 +4,17 @@ from typing import List, Dict, Optional, Union
 import httpx
 import psycopg2
 from fastapi import HTTPException
+from airflow.models import Variable
 
 from db import get_redshift_connection_internal
 from constants import WEATHER_TO_TAGS_MAP
 from utils import collect_tags
 
-LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
+try:
+    LASTFM_API_KEY = Variable.get("LASTFM_API_KEY2")
+except:
+    raise RuntimeError("AIRFLOW VARIABLE LAST.FM API_KEY2가 설정되어 있지 않습니다.")
+
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
 
 # --- 날씨 조회 ---
