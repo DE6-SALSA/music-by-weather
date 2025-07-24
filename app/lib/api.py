@@ -19,7 +19,7 @@ import streamlit as st
 # ---------------------------------------------------------------------
 # 기본 설정
 # ---------------------------------------------------------------------
-FASTAPI_BASE_URL: str = os.environ.get("FASTAPI_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+FASTAPI_BASE_URL: str = os.environ.get("FASTAPI_BASE_URL", "http://10.0.45.211:8000").rstrip("/")
 
 _SESSION = requests.Session()
 _TIMEOUT = 100  # seconds
