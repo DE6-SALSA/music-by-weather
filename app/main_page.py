@@ -6,7 +6,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 from lib import api, theme, ui
-
+ 
 load_dotenv()
 
 st.set_page_config(layout="wide")
