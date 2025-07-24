@@ -5,9 +5,9 @@ import httpx
 import psycopg2
 from fastapi import HTTPException
 
-from api.db import get_redshift_connection_internal
-from api.constants import WEATHER_TO_TAGS_MAP
-from api.utils import collect_tags
+from db import get_redshift_connection_internal
+from constants import WEATHER_TO_TAGS_MAP
+from utils import collect_tags
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
