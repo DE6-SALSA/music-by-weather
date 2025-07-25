@@ -143,7 +143,7 @@ def copy_to_redshift(**kwargs):
               AND play_cnt >= 0
               AND listener_cnt >= 0
               AND NOT (tag1 IS NULL AND tag2 IS NULL AND tag3 IS NULL AND tag4 IS NULL AND tag5 IS NULL)
-        ) AS src
+        ) src
         ON tgt.artist = src.artist AND tgt.title = src.title
         WHEN MATCHED AND (
             tgt.play_cnt <> src.play_cnt
