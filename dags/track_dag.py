@@ -43,7 +43,7 @@ with DAG(
 
     t3 = PythonOperator(
         task_id='save_to_s3_csv',
-        python_callable=save_to_s3_csv,
+        python_callable=save_to_s3_parquet,
         provide_context=True
     )
 
