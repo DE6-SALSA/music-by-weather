@@ -13,6 +13,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Debug Bastion Host
+        run: |
+          echo "BASTION_HOST: ${{ secrets.BASTION_HOST }}"
+          ping -c 1 ${{ secrets.BASTION_HOST }} || echo "Ping failed"
+
+
       - name: Set up SSH key
         run: |
           set -x  # 실행되는 명령어를 전부 출력
