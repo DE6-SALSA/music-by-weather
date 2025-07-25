@@ -92,16 +92,17 @@ def enrich_with_tags(**kwargs):
     logging.info(f"Enriched {len(enriched)} tracks")
 
 
-def save_to_s3_csv(**kwargs):
-    logging.info("Start save_to_s3_csv")
+def save_to_s3_parquet(**kwargs):
+    logging.info("Start save_to_s3_parquet")
     ti = kwargs['ti']
     enriched = ti.xcom_pull(key='enriched_tracks')
     df = pd.DataFrame(enriched, columns=COLUMNS)
 
     now_kst = datetime.now(ZoneInfo("Asia/Seoul"))
-    filename = f"track_data_{now_kst:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}.csv"
+    filename = f"track_data_{now_kst:%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}.parquet"
     local_path = f"/tmp/{filename}"
-    df.to_csv(local_path, index=False)
+
+    df.to_parquet(local_path, engine="pyarrow", index=False, compression="snappy")
 
     s3_key = f"track_data/{filename}"
     S3Hook(aws_conn_id='aws_s3_conn').load_file(
@@ -114,6 +115,7 @@ def save_to_s3_csv(**kwargs):
     ti.xcom_push(key='s3_key', value=s3_key)
     os.remove(local_path)
     logging.info(f"Uploaded to S3: {s3_key}")
+
 
 def copy_to_redshift(**kwargs):
     logging.info("Start copy_to_redshift")
@@ -129,7 +131,7 @@ def copy_to_redshift(**kwargs):
         FROM 's3://{S3_BUCKET}/{s3_key}'
         ACCESS_KEY_ID '{AWS_ACCESS_KEY_ID}'
         SECRET_ACCESS_KEY '{AWS_SECRET_ACCESS_KEY}'
-        CSV IGNOREHEADER 1;
+        FORMAT AS PARQUET;
     """)
 
     update_sql = """
