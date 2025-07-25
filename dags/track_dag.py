@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME', '/opt/airflow'), 'etl'
 from track_etl import (
     extract_tracks,
     enrich_with_tags,
-    save_to_s3_csv,
+    save_to_s3_parquet,
     copy_to_redshift
 )
 
@@ -42,7 +42,7 @@ with DAG(
     )
 
     t3 = PythonOperator(
-        task_id='save_to_s3_csv',
+        task_id='save_to_s3_parquet',
         python_callable=save_to_s3_parquet,
         provide_context=True
     )
