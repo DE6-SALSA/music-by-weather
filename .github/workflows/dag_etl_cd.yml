@@ -1,4 +1,4 @@
-name: DAG CD
+name: master dags&etl folder cd
 
 on:
   workflow_dispatch:
