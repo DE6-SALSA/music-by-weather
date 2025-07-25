@@ -1,0 +1,37 @@
+name: develop app cd
+
+on:
+  push:
+    paths:
+      - 'app/**'
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Detect changed folders
+        id: detect
+        run: |
+          git fetch origin master
+          CHANGED_APP=$(git diff --name-only origin/master...HEAD | grep '^app/' || true)
+          echo "app_changed=$([ -n \"$CHANGED_APP\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Sync DAGs to bastion (if changed)
+        if: steps.detect.outputs.app_changed == 'true'
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+            app/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/airflow-team4/app
