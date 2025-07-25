@@ -15,10 +15,13 @@ jobs:
 
       - name: Set up SSH key
         run: |
+          set -x  # 실행되는 명령어를 전부 출력
           mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | head -5
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+
 
       - name: Detect changed folders
         id: detect
