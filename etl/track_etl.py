@@ -133,7 +133,7 @@ def copy_to_redshift(**kwargs):
     """)
 
     merge_sql = """
-        MERGE INTO analytics_data.top_tag5 AS tgt
+        MERGE INTO analytics_data.top_tag5 tgt
         USING (
             SELECT artist, title, play_cnt, listener_cnt,
                    tag1, tag2, tag3, tag4, tag5
