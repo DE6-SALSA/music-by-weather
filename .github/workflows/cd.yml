@@ -1,14 +1,10 @@
-name: master cd
+name: DAG CD
 
 on:
-  push:
-    paths:
-      - 'dags/**'
-      - 'etl/**'
-    branches: [master]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  master-cd:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +26,7 @@ jobs:
           git fetch origin master
           CHANGED_DAGS=$(git diff --name-only origin/master...HEAD | grep '^dags/' || true)
           CHANGED_ETL=$(git diff --name-only origin/master...HEAD | grep '^etl/' || true)
-          
+
           echo "dags_changed=$([ -n \"$CHANGED_DAGS\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "etl_changed=$([ -n \"$CHANGED_ETL\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
