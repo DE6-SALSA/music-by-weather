@@ -132,25 +132,9 @@ def copy_to_redshift(**kwargs):
         CSV IGNOREHEADER 1;
     """)
 
-    merge_sql = """
-        MERGE INTO analytics_data.top_tag5
-        USING (
-            SELECT artist, title, play_cnt, listener_cnt,
-                   tag1, tag2, tag3, tag4, tag5
-            FROM raw_data.top_tag5_staging
-            WHERE artist IS NOT NULL AND artist <> ''
-              AND title IS NOT NULL AND title <> ''
-              AND play_cnt >= 0
-              AND listener_cnt >= 0
-              AND NOT (tag1 IS NULL AND tag2 IS NULL AND tag3 IS NULL AND tag4 IS NULL AND tag5 IS NULL)
-        ) src
-        ON analytics_data.top_tag5.artist = src.artist AND analytics_data.top_tag5.title = src.title
-        WHEN MATCHED AND (
-            analytics_data.top_tag5.play_cnt <> src.play_cnt
-            OR analytics_data.top_tag5.listener_cnt <> src.listener_cnt
-        )
-        THEN UPDATE SET
-            play_cnt = src.play_cnt,
+    update_sql = """
+        UPDATE analytics_data.top_tag5 AS tgt
+        SET play_cnt = src.play_cnt,
             listener_cnt = src.listener_cnt,
             tag1 = src.tag1,
             tag2 = src.tag2,
@@ -158,14 +142,32 @@ def copy_to_redshift(**kwargs):
             tag4 = src.tag4,
             tag5 = src.tag5,
             load_time = GETDATE() AT TIME ZONE 'Asia/Seoul'
-        WHEN NOT MATCHED THEN
-            INSERT (artist, title, play_cnt, listener_cnt,
-                    tag1, tag2, tag3, tag4, tag5, load_time)
-            VALUES (src.artist, src.title, src.play_cnt, src.listener_cnt,
-                    src.tag1, src.tag2, src.tag3, src.tag4, src.tag5,
-                    GETDATE() AT TIME ZONE 'Asia/Seoul');
+        FROM raw_data.top_tag5_staging AS src
+        WHERE tgt.artist = src.artist
+          AND tgt.title = src.title
+          AND (tgt.play_cnt <> src.play_cnt OR tgt.listener_cnt <> src.listener_cnt);
     """
-    hook.run(merge_sql)
+    hook.run(update_sql)
+
+    insert_sql = """
+        INSERT INTO analytics_data.top_tag5 (
+            artist, title, play_cnt, listener_cnt,
+            tag1, tag2, tag3, tag4, tag5, load_time
+        )
+        SELECT src.artist, src.title, src.play_cnt, src.listener_cnt,
+               src.tag1, src.tag2, src.tag3, src.tag4, src.tag5,
+               GETDATE() AT TIME ZONE 'Asia/Seoul'
+        FROM raw_data.top_tag5_staging AS src
+        LEFT JOIN analytics_data.top_tag5 AS tgt
+          ON src.artist = tgt.artist AND src.title = tgt.title
+        WHERE tgt.artist IS NULL
+          AND src.artist IS NOT NULL AND src.artist <> ''
+          AND src.title IS NOT NULL AND src.title <> ''
+          AND src.play_cnt >= 0
+          AND src.listener_cnt >= 0
+          AND NOT (src.tag1 IS NULL AND src.tag2 IS NULL AND src.tag3 IS NULL AND src.tag4 IS NULL AND src.tag5 IS NULL);
+    """
+    hook.run(insert_sql)
 
     invalid_sql = """
         INSERT INTO raw_data.bad_records_top_tag5 (
@@ -193,5 +195,4 @@ def copy_to_redshift(**kwargs):
     """
     hook.run(invalid_sql)
 
-    logging.info("Finished copy_to_redshift with MERGE logic and validation")
-
+    logging.info("Finished copy_to_redshift with UPDATE+INSERT logic")
