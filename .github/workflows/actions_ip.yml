@@ -38,14 +38,10 @@ jobs:
 
       - name: Deploy to Bastion & Private EC2
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ec2-user@${{ secrets.BASTION_HOST }} << 'EOF'
-            echo "Bastion 접속 성공"
-
-            # Bastion → Private EC2로 SSH 접속 및 명령 실행
-            ssh -o StrictHostKeyChecking=no -i ~/key_folder/de6-team4-private.pem ec2-user@10.0.45.211 << 'INNER'
-              echo "Private EC2 접속 성공"
-            INNER
-          EOF
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ec2-user@${{ secrets.BASTION_HOST }} \
+            "echo 'Bastion 접속 성공' && \
+             ssh -o StrictHostKeyChecking=no -i ~/key_folder/de6-team4-private.pem ec2-user@10.0.45.211 \
+             'echo Private EC2 접속 성공'"
 
       - name: Wait and Revoke IP
         run: |
