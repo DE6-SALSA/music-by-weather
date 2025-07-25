@@ -1,4 +1,4 @@
-name: DAG CI
+name: master dags&etl folder ci
 
 on:
   push:
