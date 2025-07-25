@@ -1,16 +1,15 @@
-name: dag ci
+name: DAG CI
 
 on:
   push:
     branches: [master]
     paths:
-      - 'dags/**'
-      - 'etl/**'
+      - "dags/**"
+      - "etl/**"
 
 jobs:
-  airflow-dag-test:
+  dag-ci:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -40,11 +39,10 @@ jobs:
             airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
             airflow variables set LASTFM_API_KEY 'dummy'
           "
+
       - name: Check DAG import errors
         run: |
-          echo "airflow dags list"
           docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
-          echo "DAG import errors (if any):"
           docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors > dag_error.log || true
           cat dag_error.log
 
@@ -52,7 +50,15 @@ jobs:
             echo "❌ DAG import error detected"
             exit 1
           fi
- 
+
       - name: Shut down Airflow containers
         if: always()
         run: docker compose -f docker-compose_git.yml down
+
+      - name: Trigger CD workflow
+        if: success()
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: DAG CD
+          ref: refs/heads/master
+          token: ${{ secrets.GITHUB_TOKEN }}
