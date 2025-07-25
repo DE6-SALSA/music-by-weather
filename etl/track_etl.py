@@ -133,7 +133,7 @@ def copy_to_redshift(**kwargs):
     """)
 
     merge_sql = """
-        MERGE INTO analytics_data.top_tag5 tgt
+        MERGE INTO analytics_data.top_tag5
         USING (
             SELECT artist, title, play_cnt, listener_cnt,
                    tag1, tag2, tag3, tag4, tag5
@@ -144,10 +144,10 @@ def copy_to_redshift(**kwargs):
               AND listener_cnt >= 0
               AND NOT (tag1 IS NULL AND tag2 IS NULL AND tag3 IS NULL AND tag4 IS NULL AND tag5 IS NULL)
         ) src
-        ON tgt.artist = src.artist AND tgt.title = src.title
+        ON analytics_data.top_tag5.artist = src.artist AND analytics_data.top_tag5.title = src.title
         WHEN MATCHED AND (
-            tgt.play_cnt <> src.play_cnt
-            OR tgt.listener_cnt <> src.listener_cnt
+            analytics_data.top_tag5.play_cnt <> src.play_cnt
+            OR analytics_data.top_tag5.listener_cnt <> src.listener_cnt
         )
         THEN UPDATE SET
             play_cnt = src.play_cnt,
