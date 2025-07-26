@@ -1,7 +1,8 @@
 import pandas as pd
 import streamlit as st
 import urllib.parse
-from lib import api, theme
+from lib import theme
+from lib.db import get_redshift_connection_internal  # Redshift 직접 연결용
 
 # Keep background transparent
 st.markdown("""
@@ -22,16 +23,52 @@ def safe_format_int(value):
     except (ValueError, TypeError):
         return ""
 
+# ✅ 지역 리스트 Redshift에서 직접 가져오기
+def get_available_regions():
+    try:
+        conn = get_redshift_connection_internal()
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT region FROM raw_data.weather_music ORDER BY region;")
+        return [r[0] for r in cursor.fetchall()]
+    except Exception as e:
+        st.error(f"[ERROR] 시/도 목록을 불러오지 못했습니다: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+# ✅ 차트 데이터 Redshift에서 직접 가져오기
+def get_lyrics_chart_simple(level1, limit=500):
+    try:
+        conn = get_redshift_connection_internal()
+        cursor = conn.cursor()
+        query = """
+            SELECT region, weather, track_name, album_title, artist_name, album_image_url, album_url, track_url,
+                listeners, playcount, headline, run_time
+            FROM raw_data.weather_music
+            WHERE region = %s
+            ORDER BY run_time DESC
+            LIMIT %s;
+        """
+        cursor.execute(query, (level1, limit))
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    except Exception as e:
+        st.error(f"[ERROR] 차트 데이터를 불러올 수 없습니다: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
 # --- 메인 로직 ---
 def main():
     st.title("가사 차트")
     st.markdown("---")
 
-    # 세션 상태 초기화
     if "lyrics_current_page" not in st.session_state:
         st.session_state.lyrics_current_page = 1
 
-    available_level1 = api.get_level1_list()
+    available_level1 = get_available_regions()
     if not available_level1:
         available_level1 = ["데이터 없음"]
         st.warning("시/도 목록을 불러올 수 없습니다.")
@@ -40,7 +77,7 @@ def main():
     selected_level1 = st.selectbox("시/도 선택", available_level1, index=default_idx, key="lyrics_level1_selector")
 
     if selected_level1 and selected_level1 != "데이터 없음":
-        chart_data = api.get_lyrics_chart_simple(selected_level1)
+        chart_data = get_lyrics_chart_simple(selected_level1)
 
         if chart_data:
             df = pd.DataFrame(chart_data)
@@ -59,7 +96,6 @@ def main():
             def set_page(new_page: int):
                 st.session_state.lyrics_current_page = max(1, min(total_pages, new_page))
 
-            # 페이지네이션 UI (chart_rank.py 참고)
             col1, col2, col3 = st.columns([1, 2, 1])
             with col1:
                 if st.button("이전 페이지", disabled=st.session_state.lyrics_current_page <= 1, key="lyrics_prev_page"):
