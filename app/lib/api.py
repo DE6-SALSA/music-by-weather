@@ -1,3 +1,4 @@
+
 # app/lib/api.py
 """
 FastAPI 백엔드 호출 래퍼 모듈.
@@ -10,7 +11,6 @@ FastAPI 백엔드 호출 래퍼 모듈.
 
 from __future__ import annotations
 
-import os
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -19,7 +19,7 @@ import streamlit as st
 # ---------------------------------------------------------------------
 # 기본 설정
 # ---------------------------------------------------------------------
-FASTAPI_BASE_URL: str = os.environ.get("FASTAPI_BASE_URL", "http://10.0.45.211:8000").rstrip("/")
+FASTAPI_BASE_URL: str = "http://10.0.45.211:8000"
 
 _SESSION = requests.Session()
 _TIMEOUT = 100  # seconds
