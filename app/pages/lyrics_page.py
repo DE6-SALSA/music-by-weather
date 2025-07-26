@@ -1,10 +1,8 @@
-import os
-import math
-import requests
+
 import pandas as pd
-import urllib.parse
 import streamlit as st
 from lib import theme
+from lib.api import get_level1_list, get_lyrics_chart_simple  # Use api.py functions
 
 # Keep background transparent
 st.markdown("""
@@ -15,26 +13,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.set_page_config(layout="wide", page_title="가사 차트")
-
-# --- API 호출 함수 ---
-def get_level1_list():
-    try:
-        res = requests.get("http://127.0.0.1:8000/locations/level1")
-        res.raise_for_status()
-        return res.json()
-    except Exception as e:
-        st.error(f"시/도 API 오류: {e}")
-        return []
-
-def get_lyrics_chart(level1: str, limit: int = 100):
-    try:
-        url = f"http://127.0.0.1:8000/chart/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
-        res = requests.get(url)
-        res.raise_for_status()
-        return res.json()
-    except Exception as e:
-        st.error(f"가사 차트 API 오류: {e}")
-        return []
 
 # --- 숫자 포맷팅 안전 함수 ---
 def safe_format_int(value):
@@ -56,7 +34,7 @@ def main():
     selected_level1 = st.selectbox("시/도 선택", available_level1, index=default_idx, key="lyrics_level1_selector")
 
     if selected_level1 and selected_level1 != "데이터 없음":
-        chart_data = get_lyrics_chart(selected_level1)
+        chart_data = get_lyrics_chart_simple(selected_level1)
 
         if chart_data:
             df = pd.DataFrame(chart_data)
