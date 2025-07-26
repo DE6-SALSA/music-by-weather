@@ -13,7 +13,7 @@ origins = [
     "http://localhost",
     "http://localhost:8501",
     "http://127.0.0.1:8501",
-    "http://10.0.45.211:8501",  # Added for Streamlit frontend on private IP
+    "http://15.165.108.160:8501",  # Added for Streamlit frontend on private IP
           # Added for EC2 private IP
 ]
 
