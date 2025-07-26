@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 import requests
 import streamlit as st
 from airflow.models import Variable
+from constants import FASTAPI_BASE_URL
 
 # ---------------------------------------------------------------------
 # 기본 설정
