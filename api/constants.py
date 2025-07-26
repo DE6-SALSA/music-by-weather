@@ -1,4 +1,15 @@
-# 날씨 조건 -> 태그 매핑
+# Airflow 메타데이터 DB에서 LASTFM_API_KEY 가져오기 위해 db.py 재사용
+from .db import get_postgres_credentials_from_airflow
+
+LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
+
+# LASTFM_API_KEY 동적 가져오기
+def get_lastfm_api_key():
+    creds = get_postgres_credentials_from_airflow()
+    return creds.get("lastfm_api_key", "<your-lastfm-key>")
+
+LASTFM_API_KEY = get_lastfm_api_key()
+
 WEATHER_TO_TAGS_MAP = {
     "Clear": [
         "happy", "love", "summer", "sunny", "upbeat", "pop", "dance", "fun",
