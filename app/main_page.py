@@ -1,13 +1,8 @@
 from __future__ import annotations
-import os
 from datetime import datetime
 import streamlit as st
 import pandas as pd
-from dotenv import load_dotenv
-
 from lib import api, theme, ui
-
-load_dotenv()
 
 st.set_page_config(layout="wide")
 
@@ -107,11 +102,11 @@ with col_region_setting:
         available_level1,
         index=default_level1_index,
         key="level1_selector",
-        on_change=update_weather,  # level1 변경 시 날씨 업데이트
+        on_change=update_weather,
     )
     if level1 != st.session_state.selected_level1:
         st.session_state.selected_level1 = level1
-        st.session_state.selected_level2 = None  # level1 변경 시 level2 초기화
+        st.session_state.selected_level2 = None
         update_weather()
 
     available_level2 = (
@@ -132,7 +127,7 @@ with col_region_setting:
         available_level2,
         index=default_level2_index,
         key="level2_selector",
-        on_change=update_weather,  # level2 변경 시 날씨 업데이트
+        on_change=update_weather,
     )
     if level2 != st.session_state.selected_level2:
         st.session_state.selected_level2 = level2
@@ -179,9 +174,8 @@ with col_weather_info:
 with col_chart_rank:
     st.subheader("차트 순위")
     if not st.session_state.chart_data_loaded:
-        raw_chart_items = api.get_chart_rank(limit=100)
+        raw_chart_items = api.get_chart_rank()
         if raw_chart_items:
-            # 중복 제거: artist + title 조합으로
             seen = set()
             unique_items = []
             for item in raw_chart_items:
@@ -189,7 +183,6 @@ with col_chart_rank:
                 if key not in seen:
                     seen.add(key)
                     unique_items.append(item)
-
             st.session_state.chart_items = unique_items
         st.session_state.chart_data_loaded = True
 
@@ -275,3 +268,5 @@ else:
         st.warning("검색어를 입력해주세요.")
 
 st.markdown("---")
+
+

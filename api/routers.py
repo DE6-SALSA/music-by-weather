@@ -35,7 +35,7 @@ async def recommend_music_by_weather(location: str = "서울특별시", sub_loca
     
     return recommended_music
 
-@router.get("/genres", response_model=List[Dict], response_model=List[Dict], tags=["Music Genres"])
+@router.get("/genres", response_model=List[str], tags=["Music Genres"])
 async def get_genre_list():
     conn = None
     cursor = None
@@ -62,7 +62,6 @@ async def get_genre_list():
             conn.close()
     return genre_list
 
-
 @router.get("/search/music", response_model=List[Dict], tags=["Music Search"]) 
 async def search_music(
     query: str = Query(..., min_length=2, description="검색할 곡명, 아티스트 또는 태그"),
@@ -79,6 +78,21 @@ async def search_music(
     
     return music_results
 
+@router.get("/recommend/lyrics", response_model=List[Dict], tags=["Lyrics Search"])
+async def recommend_by_lyrics(
+    query: str = Query(..., min_length=2, description="검색할 가사 키워드"),
+    limit: int = Query(20, description="반환할 결과의 최대 개수"),
+    randomize: bool = Query(False, description="무작위 추천 여부")
+):
+    if not query:
+        raise HTTPException(status_code=400, detail="검색어를 입력해주세요.")
+    
+    music_results = await get_music_data_from_postgres_internal(search_query=query, limit=limit, randomize=randomize)
+    
+    if not music_results:
+        raise HTTPException(status_code=404, detail=f"'{query}'에 대한 가사 기반 추천 결과를 찾을 수 없습니다.")
+    
+    return music_results
 
 @router.get("/chart_rank", response_model=List[Dict])
 async def get_chart_rank(limit: int = 50):
@@ -93,7 +107,7 @@ async def get_chart_rank(limit: int = 50):
 
         query = f"""
             SELECT {select_clause}
-            FROM raw_data.top_tag5  # Changed from analytics_data.top_tag5
+            FROM raw_data.top_tag5
             ORDER BY play_cnt DESC, listener_cnt DESC
             LIMIT %s;
         """
@@ -141,7 +155,7 @@ async def get_chart_rank(limit: int = 50):
         print(f"[DEBUG] HTTPException in get_chart_rank: {e}")
         raise e
     except Exception as e:
-        print(f"PostgreSQL에서 차트 순위 데이터를 가져오는 중 오류 발생: {e}")  # Changed from Redshift
+        print(f"PostgreSQL에서 차트 순위 데이터를 가져오는 중 오류 발생: {e}")
         raise HTTPException(status_code=500, detail=f"차트 순위 데이터를 가져오는 중 오류가 발생했습니다: {e}")
     finally:
         if cur:
@@ -187,7 +201,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
             music_data.append(music_dict)
 
     except Exception as e:
-        print(f"[ERROR] PostgreSQL에서 가사 차트 데이터를 가져오는 중 오류 발생: {e}")  # Changed from Redshift
+        print(f"[ERROR] PostgreSQL에서 가사 차트 데이터를 가져오는 중 오류 발생: {e}")
         raise HTTPException(status_code=500, detail=f"가사 차트 데이터를 가져오는 중 오류가 발생했습니다: {e}")
     finally:
         if cur:
@@ -216,7 +230,7 @@ async def get_level1_list():
     except HTTPException as e:
         raise e
     except Exception as e:
-        print(f"[ERROR] PostgreSQL에서 level1 목록 조회 오류: {e}")  # Changed from Redshift
+        print(f"[ERROR] PostgreSQL에서 level1 목록 조회 오류: {e}")
         raise HTTPException(status_code=500, detail=f"PostgreSQL에서 level1 목록 조회 오류: {e}")
     finally:
         if conn:
@@ -239,7 +253,7 @@ async def get_level2_list(level1_name: str = Query(..., description="조회할 l
     except HTTPException as e:
         raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PostgreSQL에서 level2 목록 조회 오류: {e}")  # Changed from Redshift
+        raise HTTPException(status_code=500, detail=f"PostgreSQL에서 level2 목록 조회 오류: {e}")
     finally:
         if conn:
             conn.close()
