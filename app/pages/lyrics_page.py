@@ -41,7 +41,7 @@ def main():
 
     if selected_level1 and selected_level1 != "데이터 없음":
         chart_data = api.get_lyrics_chart_simple(selected_level1)
-        
+
         if chart_data:
             df = pd.DataFrame(chart_data)
             df.columns = [col.lower() for col in df.columns]
