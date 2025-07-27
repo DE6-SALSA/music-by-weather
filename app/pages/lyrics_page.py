@@ -125,7 +125,15 @@ def main():
             link_headers = ["YouTube 링크", "Spotify 링크"]
 
             headers = base_headers + optional_headers + link_headers
-            widths = [0.5, 1, 2, 1.5] + [1] * len(optional_headers) + [1, 1]
+            widths = [0.5, 1, 2, 1.5]
+            
+            if "리스너 수" in display_df.columns:
+                widths.append(1)
+            if "재생 수" in display_df.columns:
+                widths.append(1)
+            if "유사도" in display_df.columns:
+                widths.append(1) 
+            widths.extend([1, 1])
 
             header_cols = st.columns(widths)
             for col, head in zip(header_cols, headers):
