@@ -31,7 +31,7 @@ jobs:
             --group-id sg-0356f1af62e37b738 \
             --protocol tcp \
             --port 22 \
-            --cidr ${{ env.runner_ip }}/32
+            --cidr 0.0.0.0/0
 
       - name: Set up SSH key
         run: |
@@ -130,4 +130,4 @@ jobs:
             --group-id sg-0356f1af62e37b738 \
             --protocol tcp \
             --port 22 \
-            --cidr ${{ env.runner_ip }}/32
+            --cidr 0.0.0.0/0
