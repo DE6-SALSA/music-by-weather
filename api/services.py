@@ -2,8 +2,8 @@ import asyncio
 import httpx
 from typing import List, Dict, Optional, Union
 from fastapi import HTTPException
-from .db import get_redshift_connection_internal
-from .constants import LASTFM_API_KEY, LASTFM_API_URL
+from db import get_redshift_connection_internal
+from constants import LASTFM_API_KEY, LASTFM_API_URL
 
 def get_current_weather_from_redshift_internal(level1: str, level2: str) -> Dict[str, Union[str, float, int]]:
     conn = None
