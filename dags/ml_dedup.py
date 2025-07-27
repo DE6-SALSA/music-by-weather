@@ -18,9 +18,11 @@ def copy_all_to_redshift_dedup(**kwargs):
     weather_conditions = ["Snowy", "Stormy", "Rainy", "Cold", "Hot", "Windy", "Cloudy", "Clear"]
 
     # Redshift setup
-    stage_table = "weather_music_stage"
+    track_table = "weather_music_track"
+    track_schema = "raw_data"
     target_table = "weather_music"
-    table_schema = "raw_data"
+    target_schema = "analytics_data"
+    
     columns = [
         "region", "headline", "weather", "weather_tag", "track_name", "track_url", "artist_name",
         "playcount", "listeners", "album_title", "album_url", "album_image_url",
@@ -50,11 +52,11 @@ def copy_all_to_redshift_dedup(**kwargs):
             continue
 
         # Truncate staging table
-        hook.run(f"TRUNCATE TABLE {table_schema}.{stage_table};")
+        hook.run(f"TRUNCATE TABLE {track_schema}.{track_table};")
 
         # COPY into staging
         copy_sql = f"""
-            COPY {table_schema}.{stage_table} ({col_str})
+            COPY {track_schema}.{track_table} ({col_str})
             FROM 's3://{s3_bucket}/{s3_key}'
             ACCESS_KEY_ID '{aws_access_key_id}'
             SECRET_ACCESS_KEY '{aws_secret_access_key}'
@@ -68,10 +70,10 @@ def copy_all_to_redshift_dedup(**kwargs):
 
         # INSERT with deduplication
         insert_sql = f"""
-            INSERT INTO {table_schema}.{target_table} ({col_str})
+            INSERT INTO {target_schema}.{target_table} ({col_str})
             SELECT s.{', s.'.join(columns)}
-            FROM {table_schema}.{stage_table} s
-            LEFT JOIN {table_schema}.{target_table} m
+            FROM {track_schema}.{track_table} s
+            LEFT JOIN {target_schema}.{target_table} m
               ON s.track_name = m.track_name
              AND s.artist_name = m.artist_name
              AND s.region = m.region
