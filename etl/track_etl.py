@@ -20,7 +20,7 @@ AWS_ACCESS_KEY_ID     = Variable.get("S3_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = Variable.get("S3_SECRET_KEY")
 LAST_PAGE_KEY         = "LAST_PAGE"
 
-COLUMNS = [
+COLUMNS = [track_data
     "artist", "title",
     "play_cnt", "listener_cnt",
     "tag1", "tag2", "tag3", "tag4", "tag5"
@@ -126,8 +126,8 @@ def copy_to_redshift(**kwargs):
     hook = PostgresHook(postgres_conn_id='redshift_conn')
 
     hook.run(f"""
-        TRUNCATE TABLE raw_data.top_tag5_staging;
-        COPY raw_data.top_tag5_staging ({col_str})
+        TRUNCATE TABLE raw_data.track_data;
+        COPY raw_data.track_data ({col_str})
         FROM 's3://{S3_BUCKET}/{s3_key}'
         ACCESS_KEY_ID '{AWS_ACCESS_KEY_ID}'
         SECRET_ACCESS_KEY '{AWS_SECRET_ACCESS_KEY}'
@@ -144,7 +144,7 @@ def copy_to_redshift(**kwargs):
             tag4 = src.tag4,
             tag5 = src.tag5,
             load_time = GETDATE() AT TIME ZONE 'Asia/Seoul'
-        FROM raw_data.top_tag5_staging AS src
+        FROM raw_data.track_data AS src
         WHERE tgt.artist = src.artist
           AND tgt.title = src.title
           AND (tgt.play_cnt <> src.play_cnt OR tgt.listener_cnt <> src.listener_cnt);
@@ -159,7 +159,7 @@ def copy_to_redshift(**kwargs):
         SELECT src.artist, src.title, src.play_cnt, src.listener_cnt,
                src.tag1, src.tag2, src.tag3, src.tag4, src.tag5,
                GETDATE() AT TIME ZONE 'Asia/Seoul'
-        FROM raw_data.top_tag5_staging AS src
+        FROM raw_data.track_data AS src
         LEFT JOIN analytics_data.top_tag5 AS tgt
           ON src.artist = tgt.artist AND src.title = tgt.title
         WHERE tgt.artist IS NULL
@@ -188,7 +188,7 @@ def copy_to_redshift(**kwargs):
                    ELSE 'unknown'
                END AS error_reason,
                GETDATE() AT TIME ZONE 'Asia/Seoul'
-        FROM raw_data.top_tag5_staging
+        FROM raw_data.track_data
         WHERE artist IS NULL OR artist = ''
            OR title IS NULL OR title = ''
            OR play_cnt < 0
