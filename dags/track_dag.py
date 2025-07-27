@@ -3,9 +3,9 @@ import sys
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from etl.slack_alert import slack_alert
-sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME', '/opt/airflow'), 'etl'))
 
+sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME', '/opt/airflow'), 'etl'))
+from etl.slack_alert import slack_alert
 from track_etl import (
     extract_tracks,
     enrich_with_tags,
