@@ -1,20 +1,18 @@
-# Airflow 메타데이터 DB에서 LASTFM_API_KEY 가져오기 위해 db.py 재사용
-# from .db import get_postgres_credentials_from_airflow # 이 라인을
-from .db import get_redshift_credentials_from_airflow # 이렇게 변경합니다.
+import os
+from dotenv import load_dotenv
 
-# LASTFM_API_KEY와 LASTFM_API_URL을 db에서 가져오거나 직접 정의하는 방식은
-# 프로젝트의 설정에 따라 달라질 수 있습니다.
-# 예를 들어, Last.fm API 키는 환경 변수에서 가져오거나 직접 여기에 정의할 수 있습니다.
-# 예시:
-LASTFM_API_KEY = "YOUR_LASTFM_API_KEY" # 실제 Last.fm API 키로 변경
+load_dotenv()
+
+REDSHIFT_CONFIG = {
+    "host": os.environ.get("REDSHIFT_HOST"),
+    "port": os.environ.get("REDSHIFT_PORT"),
+    "database": os.environ.get("REDSHIFT_DBNAME"),
+    "user": os.environ.get("REDSHIFT_USER"),
+    "password": os.environ.get("REDSHIFT_PASSWORD")
+}
+
+LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
 LASTFM_API_URL = "http://ws.audioscrobbler.com/2.0/"
-
-FASTAPI_BASE_URL = "http://10.0.45.211:8000" # 당신의 FastAPI 백엔드 주소
-FRONTEND_URL = "http://15.165.108.160:8501" # 당신의 Streamlit 프론트엔드 주소
-
-IS_PROD = False
-DOCS_URL = "/docs" if not IS_PROD else None # 프로덕션 환경에서는 docs를 비활성화하는 경우가 많습니다.
-
 
 WEATHER_TO_TAGS_MAP = {
     "Clear": [
