@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ AWS Credentials 설정
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -19,6 +20,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
+      # 2️⃣ 보안 그룹을 0.0.0.0/0로 열기
       - name: Authorize All IP
         run: |
           aws ec2 authorize-security-group-ingress \
@@ -27,6 +29,7 @@ jobs:
             --port 22 \
             --cidr 0.0.0.0/0
 
+      # 3️⃣ SSH Key 설정
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -34,6 +37,21 @@ jobs:
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
 
+      # 4️⃣ SSH 연결 테스트
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            ec2-user@${{ secrets.BASTION_HOST }} "echo SSH OK"
+
+      # 5️⃣ dags 폴더 내용 확인 (rsync 전에 필수!)
+      - name: Debug dags folder
+        run: |
+          echo "### dags folder contents ###"
+          ls -al dags/ || echo "dags folder is empty!"
+
+      # 6️⃣ CI 단계 (기존 코드)
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -52,23 +70,11 @@ jobs:
       - name: Wait for Airflow to initialize
         run: sleep 30
 
-      - name: Set dummy Airflow Variables
-        run: |
-          docker compose -f docker-compose_git.yml exec -T airflow-webserver bash -c "
-            airflow variables set WEATHER_API_KEY 'dummy-weather-key' &&
-            airflow variables set S3_BUCKET_NAME 'dummy-bucket' &&
-            airflow variables set S3_ACCESS_KEY 'dummy-access-key' &&
-            airflow variables set S3_SECRET_KEY 'dummy-secret-key' &&
-            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
-            airflow variables set LASTFM_API_KEY 'dummy'
-          "
-
       - name: Check DAG import errors
         run: |
           docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
           docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors > dag_error.log || true
           cat dag_error.log
-
           if grep -q "Traceback" dag_error.log; then
             echo "❌ DAG import error detected"
             exit 1
@@ -78,6 +84,7 @@ jobs:
         if: always()
         run: docker compose -f docker-compose_git.yml down
 
+      # 7️⃣ 변경된 파일 확인
       - name: Detect changed folders
         id: detect
         if: success()
@@ -85,22 +92,26 @@ jobs:
           git fetch origin master
           CHANGED_DAGS=$(git diff --name-only origin/master...HEAD | grep '^dags/' || true)
           CHANGED_ETL=$(git diff --name-only origin/master...HEAD | grep '^etl/' || true)
-
           echo "dags_changed=$([ -n \"$CHANGED_DAGS\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "etl_changed=$([ -n \"$CHANGED_ETL\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
+      # 8️⃣ DAGs 전송 (진행률 + 타임아웃 추가)
       - name: Sync DAGs to bastion (if changed)
         if: steps.detect.outputs.dags_changed == 'true'
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+          timeout 60 rsync -avz --progress --delete \
+            -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
             dags/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_dags/
 
+      # 9️⃣ ETL 전송
       - name: Sync ETL to bastion (if changed)
         if: steps.detect.outputs.etl_changed == 'true'
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+          timeout 60 rsync -avz --progress --delete \
+            -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
             etl/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_etl/
 
+      # 🔟 Bastion → Private EC2 복사
       - name: From bastion, sync to private EC2
         if: success()
         run: |
@@ -109,13 +120,13 @@ jobs:
               rsync -avz --delete -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
                 /home/ec2-user/temp_dags/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/dags/
             fi
-
             if [ -d /home/ec2-user/temp_etl ]; then
               rsync -avz --delete -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
                 /home/ec2-user/temp_etl/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/etl/
             fi
           EOF
 
+      # 11️⃣ 실행 후 SG 닫기 (무조건 실행)
       - name: Remove All IP Access
         if: always()
         run: |
