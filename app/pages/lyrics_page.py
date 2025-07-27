@@ -20,7 +20,7 @@ st.set_page_config(layout="wide", page_title="가사 차트")
 # --- API 호출 함수 ---
 def get_level1_list():
     try:
-        res = requests.get("http://127.0.0.1:8000/locations/level1")
+        res = requests.get(f"{API_BASE_URL}/locations/level1")
         res.raise_for_status()
         return res.json()
     except Exception as e:
