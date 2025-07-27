@@ -20,7 +20,7 @@ AWS_ACCESS_KEY_ID     = Variable.get("S3_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = Variable.get("S3_SECRET_KEY")
 LAST_PAGE_KEY         = "LAST_PAGE"
 
-COLUMNS = [track_data
+COLUMNS = [
     "artist", "title",
     "play_cnt", "listener_cnt",
     "tag1", "tag2", "tag3", "tag4", "tag5"
