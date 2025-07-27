@@ -120,9 +120,9 @@ def main():
                 optional_headers.append("리스너 수")
             if "재생 수" in display_df.columns:
                 optional_headers.append("재생 수")
-            link_headers = ["YouTube 링크", "Spotify 링크"]
             if "유사도" in display_df.columns:
                 optional_headers.append("유사도")
+            link_headers = ["YouTube 링크", "Spotify 링크"]
 
             headers = base_headers + optional_headers + link_headers
             widths = [0.5, 1, 2, 1.5] + [1] * len(optional_headers) + [1, 1]
