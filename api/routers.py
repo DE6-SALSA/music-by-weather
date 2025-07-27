@@ -142,7 +142,6 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
             ORDER BY run_time DESC
             LIMIT %s;
         """
-        cur.execute(query, (level1, limit))
         print(f"[DEBUG] Executing simple lyrics chart query for level1={level1}: {query}")
         cur.execute(query, (level1, limit))
         music_records = cur.fetchall()
