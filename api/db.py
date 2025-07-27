@@ -1,7 +1,7 @@
 import psycopg2
 import os
 from fastapi import HTTPException
-from .constants import REDSHIFT_CONFIG
+from constants import REDSHIFT_CONFIG
 
 def test_redshift_connection():
     print("\n--- Redshift 연결 테스트 시작 ---")
