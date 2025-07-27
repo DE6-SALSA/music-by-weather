@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Optional
 import requests
 import streamlit as st
 
-FASTAPI_BASE_URL = "http://10.0.45.211:8000"
+FASTAPI_BASE_URL = os.environ.get("FASTAPI_BASE_URL", "http://10.0.45.211:8000")
+
 
 
 _SESSION = requests.Session()
