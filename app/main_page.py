@@ -3,7 +3,7 @@ from datetime import datetime
 import streamlit as st
 import pandas as pd
 from lib import api, theme, ui
-
+import os
 st.set_page_config(layout="wide")
 
 # ---------------- Session defaults -----------------
