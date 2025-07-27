@@ -4,9 +4,9 @@ import requests
 import pandas as pd
 import urllib.parse
 import streamlit as st
-from lib import theme
+from lib import theme, api   # ✅ api 모듈 임포트 추가
 
-API_BASE_URL = api.FASTAPI_BASE_URL
+API_BASE_URL = api.FASTAPI_BASE_URL  # ✅ api.py에서 설정한 BASE_URL 사용
 
 st.markdown("""
 <style>
@@ -29,7 +29,7 @@ def get_level1_list():
 
 def get_lyrics_chart(level1: str, limit: int = 100):
     try:
-        url = f"http://127.0.0.1:8000/chart/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
+        url = f"{API_BASE_URL}/chart/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
         res = requests.get(url)
         res.raise_for_status()
         return res.json()
