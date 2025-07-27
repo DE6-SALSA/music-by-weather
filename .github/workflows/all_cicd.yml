@@ -1,4 +1,4 @@
-name: git ip add to cd
+name: git open sg for ci-cd
 
 on:
   push:
@@ -19,23 +19,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
-      - name: Get GitHub Actions IPs
-        id: get-ips
+      - name: Authorize All IP
         run: |
-          echo "Fetching GitHub Actions IP list..."
-          curl -s https://api.github.com/meta | jq -r '.actions[]' > actions_ips.txt
-          cat actions_ips.txt
-          
-      - name: Authorize GitHub Actions IPs
-        run: |
-          while read ip; do
-            echo "Adding IP: $ip"
-            aws ec2 authorize-security-group-ingress \
-              --group-id sg-0356f1af62e37b738 \
-              --protocol tcp \
-              --port 22 \
-              --cidr $ip || true
-          done < actions_ips.txt
+          aws ec2 authorize-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr 0.0.0.0/0
 
       - name: Set up SSH key
         run: |
@@ -126,14 +116,11 @@ jobs:
             fi
           EOF
 
-      - name: Remove GitHub Actions IPs
+      - name: Remove All IP Access
         if: always()
         run: |
-          while read ip; do
-            echo "Removing IP: $ip"
-            aws ec2 revoke-security-group-ingress \
-              --group-id sg-0356f1af62e37b738 \
-              --protocol tcp \
-              --port 22 \
-              --cidr $ip || true
-          done < actions_ips.txt
+          aws ec2 revoke-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr 0.0.0.0/0
