@@ -138,7 +138,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
 
         query = """
             SELECT region, weather, track_name, album_title, artist_name, album_image_url, album_url, track_url,
-                listeners, playcount, headline, run_time
+                listeners, playcount, headline, run_time, similarity_to_headline
             FROM raw_data.weather_music
             WHERE region = %s
             ORDER BY similarity_to_headline DESC
