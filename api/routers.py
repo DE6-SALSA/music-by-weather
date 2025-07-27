@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Dict, Optional, Union
 from fastapi import APIRouter, HTTPException, Query
-from .db import get_redshift_connection_internal  # Changed from get_postgres_connection_internal
+from .db import get_redshift_connection_internal
 from .services import get_current_weather_from_redshift_internal, get_music_data_from_redshift_internal
 
 router = APIRouter()
@@ -29,55 +29,29 @@ async def recommend_music_by_weather(location: str = "서울특별시", sub_loca
         fallback_music = await get_music_data_from_redshift_internal(limit=5) 
         if not fallback_music:
             return [{"message": f"{location}의 {current_condition} 날씨에 맞는 추천 음악을 찾을 수 없습니다. 현재 데이터베이스에 추천할 음악이 없습니다."}]
-        return [{"message": f"{location}의 {current_condition} 날씨에 맞는 추천 음악을 찾을 수 없습니다. 다른 인기 음악을 추천합니다."}, *fallback_music]
-
+        return [{"message": f"{location}의 {current_condition} 날씨에 맞는 추천 음악을 찾을 수 없습니다. 다른 인기 음악을 추천합니다."},
+                *fallback_music]
+    
     return recommended_music
 
-@router.get("/genres", response_model=List[str], tags=["Music Genres"])
-async def get_genre_list():
-    conn = None
-    cursor = None
-    genre_list = []
-
-    try:
-        conn = get_redshift_connection_internal()
-        cursor = conn.cursor()
-        query = "SELECT DISTINCT genre FROM raw_data.weather_genre ORDER BY genre;"
-        cursor.execute(query)
-        results = cursor.fetchall()
-        genre_list = [row[0] for row in results]
-        print(f"[DEBUG] Fetched {len(genre_list)} genres: {genre_list}")
-
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        print(f"[ERROR] Redshift에서 장르 목록 조회 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"Redshift에서 장르 목록 조회 오류: {e}")
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-    return genre_list
-
-@router.get("/search/music", response_model=List[Dict], tags=["Music Search"])
+@router.get("/search/music", response_model=List[Dict], tags=["Music Search"]) 
 async def search_music(
-    query: str = Query(..., min_length=2, description="검색할 곡명, 아티스트 또는 태그"),
-    limit: int = Query(10, description="반환할 결과의 최대 10개"),
+    query: str = Query(..., min_length=2, description="검색할 곡명, 아티스트, 앨범 또는 태그"),
+    limit: int = Query(20, description="반환할 결과의 최대 개수"),
     randomize: bool = Query(False, description="무작위 추천 여부")
 ):
     if not query:
         raise HTTPException(status_code=400, detail="검색어를 입력해주세요.")
-
-    music_results = await get_music_data_from_redshift_internal(search_query=query, limit=limit, randomize=randomize)
-
+    
+    music_results = await get_music_data_from_redshift_internal(search_query=query, limit=limit, randomize=randomize) 
+    
     if not music_results:
         raise HTTPException(status_code=404, detail=f"'{query}'에 대한 검색 결과를 찾을 수 없습니다.")
-
+    
     return music_results
 
 @router.get("/chart_rank", response_model=List[Dict])
-async def get_chart_rank(limit: int = 50):
+async def get_chart_rank(limit: int = 100):
     music_rank_data = []
     conn = None
     cur = None
@@ -89,7 +63,7 @@ async def get_chart_rank(limit: int = 50):
 
         query = f"""
             SELECT {select_clause}
-            FROM raw_data.top_tag5
+            FROM analytics_data.top_tag5
             ORDER BY play_cnt DESC, listener_cnt DESC
             LIMIT %s;
         """
@@ -102,18 +76,24 @@ async def get_chart_rank(limit: int = 50):
             print(f"[DEBUG] First chart rank record: {music_records[0]}")
 
         columns = [desc[0] for desc in cur.description]
-
+        
         lastfm_tasks = []
-        from .services import get_lastfm_track_info
+        
+        from .services import get_lastfm_track_info # Import here to avoid circular dependency if router imports service and service imports router
 
         for i, record in enumerate(music_records):
             music_dict = dict(zip(columns, record))
-            combined_tags = [music_dict[f'tag{j}'] for j in range(1, 6) if music_dict.get(f'tag{j}') and music_dict[f'tag{j}'].strip() != '']
+            combined_tags = [
+                music_dict[f'tag{j}'] for j in range(1, 6)
+                if music_dict.get(f'tag{j}') and music_dict[f'tag{j}'].strip() != ''
+            ]
             music_dict['tags'] = combined_tags
             for j in range(1, 6):
-                music_dict.pop(f'tag{j}', None)
+                if f'tag{j}' in music_dict:
+                    del music_dict[f'tag{j}']
 
-            music_dict['rank'] = i + 1
+            music_dict['rank'] = i + 1 
+            
             lastfm_tasks.append(get_lastfm_track_info(music_dict['artist'], music_dict['title']))
             music_rank_data.append(music_dict)
 
@@ -138,7 +118,7 @@ async def get_chart_rank(limit: int = 50):
             cur.close()
         if conn:
             conn.close()
-
+    
     if not music_rank_data:
         print(f"[DEBUG] No chart rank data found")
         raise HTTPException(status_code=404, detail="차트 순위 데이터를 찾을 수 없습니다.")
@@ -156,12 +136,13 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
 
         query = """
             SELECT region, weather, track_name, album_title, artist_name, album_image_url, album_url, track_url,
-                   listeners, playcount, headline, run_time
+                listeners, playcount, headline, run_time
             FROM raw_data.weather_music
             WHERE region = %s
             ORDER BY run_time DESC
             LIMIT %s;
         """
+        cur.execute(query, (level1, limit))
         print(f"[DEBUG] Executing simple lyrics chart query for level1={level1}: {query}")
         cur.execute(query, (level1, limit))
         music_records = cur.fetchall()
@@ -188,7 +169,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
     if not music_data:
         print(f"[DEBUG] No simple lyrics chart data found for level1={level1}")
         raise HTTPException(status_code=404, detail=f"{level1}에 대한 가사 차트 데이터를 찾을 수 없습니다.")
-
+    
     return music_data
 
 @router.get("/locations/level1", response_model=List[str])
