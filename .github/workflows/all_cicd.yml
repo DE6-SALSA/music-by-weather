@@ -1,0 +1,133 @@
+name: git ip add to cd
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "dags/**"
+      - "etl/**"
+
+jobs:
+  ci-cd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Runner Public IP
+        id: ip
+        run: |
+          echo "runner_ip=$(curl -s https://api.ipify.org)" >> $GITHUB_ENV
+          echo "Runner IP: ${{ env.runner_ip }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Authorize GitHub Actions IP
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.runner_ip }}/32
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Start dependencies (Postgres & Redis)
+        run: docker compose -f docker-compose_git.yml up -d postgres redis
+
+      - name: Wait for DB to be ready
+        run: sleep 10
+
+      - name: Initialize Airflow DB
+        run: docker compose -f docker-compose_git.yml run airflow-webserver airflow db migrate
+
+      - name: Start Airflow Webserver
+        run: docker compose -f docker-compose_git.yml up -d airflow-webserver
+
+      - name: Wait for Airflow to initialize
+        run: sleep 30
+
+      - name: Set dummy Airflow Variables
+        run: |
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver bash -c "
+            airflow variables set WEATHER_API_KEY 'dummy-weather-key' &&
+            airflow variables set S3_BUCKET_NAME 'dummy-bucket' &&
+            airflow variables set S3_ACCESS_KEY 'dummy-access-key' &&
+            airflow variables set S3_SECRET_KEY 'dummy-secret-key' &&
+            airflow variables set SLACK_KEY 'https://hooks.slack.com/services/dummy-webhook-url' &&
+            airflow variables set LASTFM_API_KEY 'dummy'
+          "
+
+      - name: Check DAG import errors
+        run: |
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list
+          docker compose -f docker-compose_git.yml exec -T airflow-webserver airflow dags list-import-errors > dag_error.log || true
+          cat dag_error.log
+
+          if grep -q "Traceback" dag_error.log; then
+            echo "❌ DAG import error detected"
+            exit 1
+          fi
+
+      - name: Shut down Airflow containers
+        if: always()
+        run: docker compose -f docker-compose_git.yml down
+
+      - name: Detect changed folders
+        id: detect
+        if: success()
+        run: |
+          git fetch origin master
+          CHANGED_DAGS=$(git diff --name-only origin/master...HEAD | grep '^dags/' || true)
+          CHANGED_ETL=$(git diff --name-only origin/master...HEAD | grep '^etl/' || true)
+
+          echo "dags_changed=$([ -n \"$CHANGED_DAGS\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "etl_changed=$([ -n \"$CHANGED_ETL\" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+      - name: Sync DAGs to bastion (if changed)
+        if: steps.detect.outputs.dags_changed == 'true'
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+            dags/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_dags/
+
+      - name: Sync ETL to bastion (if changed)
+        if: steps.detect.outputs.etl_changed == 'true'
+        run: |
+          rsync -avz --delete -e "ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no" \
+            etl/ ec2-user@${{ secrets.BASTION_HOST }}:/home/ec2-user/temp_etl/
+
+      - name: From bastion, sync to private EC2
+        if: success()
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.BASTION_HOST }} << 'EOF'
+            if [ -d /home/ec2-user/temp_dags ]; then
+              rsync -avz --delete -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
+                /home/ec2-user/temp_dags/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/dags/
+            fi
+
+            if [ -d /home/ec2-user/temp_etl ]; then
+              rsync -avz --delete -e "ssh -i ~/key_folder/de6-team4-private.pem -o StrictHostKeyChecking=no" \
+                /home/ec2-user/temp_etl/ ec2-user@10.0.45.211:/home/ec2-user/airflow-private/etl/
+            fi
+          EOF
+
+      - name: Remove IP
+        if: always()
+        run: |
+          echo "🧹 Removing IP ${{ env.runner_ip }}"
+          aws ec2 revoke-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.runner_ip }}/32
