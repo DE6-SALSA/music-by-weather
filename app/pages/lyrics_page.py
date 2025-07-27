@@ -94,6 +94,7 @@ def main():
                     "커버": item.get("album_image_url", ""),
                     "제목": title,
                     "아티스트": artist,
+                    "유사도": item.get("similarity_to_headline"),
                     "YouTube 링크": f"https://www.youtube.com/results?search_query={urllib.parse.quote(artist)}+{urllib.parse.quote(title)}",
                     "Spotify 링크": f"https://open.spotify.com/search/{urllib.parse.quote(artist)}%20{urllib.parse.quote(title)}",
                 }
