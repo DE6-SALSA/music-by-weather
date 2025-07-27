@@ -6,7 +6,8 @@ import urllib.parse
 import streamlit as st
 from lib import theme
 
-# Keep background transparent
+API_BASE_URL = api.FASTAPI_BASE_URL
+
 st.markdown("""
 <style>
     [data-testid], [class*="css-"] { background: transparent !important; }
