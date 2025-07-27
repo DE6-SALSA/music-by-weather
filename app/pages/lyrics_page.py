@@ -1,7 +1,10 @@
+import os
+import math
+import requests
 import pandas as pd
-import streamlit as st
 import urllib.parse
-from lib import api, theme
+import streamlit as st
+from lib import theme
 
 # Keep background transparent
 st.markdown("""
@@ -13,7 +16,25 @@ st.markdown("""
 
 st.set_page_config(layout="wide", page_title="가사 차트")
 
-ITEMS_PER_PAGE = 20  # chart_rank.py 참고
+# --- API 호출 함수 ---
+def get_level1_list():
+    try:
+        res = requests.get("http://127.0.0.1:8000/locations/level1")
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        st.error(f"시/도 API 오류: {e}")
+        return []
+
+def get_lyrics_chart(level1: str, limit: int = 100):
+    try:
+        url = f"http://127.0.0.1:8000/chart/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
+        res = requests.get(url)
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        st.error(f"가사 차트 API 오류: {e}")
+        return []
 
 # --- 숫자 포맷팅 안전 함수 ---
 def safe_format_int(value):
@@ -27,20 +48,15 @@ def main():
     st.title("가사 차트")
     st.markdown("---")
 
-    # 세션 상태 초기화
-    if "lyrics_current_page" not in st.session_state:
-        st.session_state.lyrics_current_page = 1
-
-    available_level1 = api.get_level1_list()
+    available_level1 = get_level1_list()
     if not available_level1:
         available_level1 = ["데이터 없음"]
-        st.warning("시/도 목록을 불러올 수 없습니다.")
 
     default_idx = available_level1.index("서울특별시") if "서울특별시" in available_level1 else 0
     selected_level1 = st.selectbox("시/도 선택", available_level1, index=default_idx, key="lyrics_level1_selector")
 
     if selected_level1 and selected_level1 != "데이터 없음":
-        chart_data = api.get_lyrics_chart_simple(selected_level1)
+        chart_data = get_lyrics_chart(selected_level1)
 
         if chart_data:
             df = pd.DataFrame(chart_data)
@@ -53,71 +69,37 @@ def main():
             if all(c in df.columns for c in ["track_name", "artist_name"]):
                 df = df.drop_duplicates(subset=["track_name", "artist_name"], keep="first")
 
-            total_items = len(df)
-            total_pages = max(1, (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
-
-            def set_page(new_page: int):
-                st.session_state.lyrics_current_page = max(1, min(total_pages, new_page))
-
-            # 페이지네이션 UI (chart_rank.py 참고)
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                if st.button("이전 페이지", disabled=st.session_state.lyrics_current_page <= 1, key="lyrics_prev_page"):
-                    set_page(st.session_state.lyrics_current_page - 1)
-                    st.rerun()
-            with col2:
-                st.markdown(f"<h3 style='text-align: center;'>페이지 {st.session_state.lyrics_current_page} / {total_pages}</h3>", unsafe_allow_html=True)
-            with col3:
-                if st.button("다음 페이지", disabled=st.session_state.lyrics_current_page >= total_pages, key="lyrics_next_page"):
-                    set_page(st.session_state.lyrics_current_page + 1)
-                    st.rerun()
-
-            jump_col = st.columns([1, 8, 1])[2]
-            with jump_col:
-                go_to = st.selectbox(
-                    "페이지 이동",
-                    options=list(range(1, total_pages + 1)),
-                    index=st.session_state.lyrics_current_page - 1,
-                    label_visibility="collapsed",
-                    key="lyrics_page_select",
-                )
-                if go_to != st.session_state.lyrics_current_page:
-                    set_page(go_to)
-                    st.rerun()
-
-            start = (st.session_state.lyrics_current_page - 1) * ITEMS_PER_PAGE
-            end = start + ITEMS_PER_PAGE
-            display_df = df.iloc[start:end].reset_index(drop=True)
-
             title_col = next((c for c in ["track_name", "title", "name", "song_name"] if c in df.columns), None)
-            weather_text = display_df.iloc[0].get("weather", "Clear") if not display_df.empty else "Clear"
+
+            # ✅ 날씨 값 기반으로 테마/배경 적용
+            weather_text = df.iloc[0].get("weather", "Clear")
             header_col = theme.header_color(weather_text)
             link_col = theme.link_color(weather_text)
 
             st.markdown(theme.weather_animation_html(weather_text), unsafe_allow_html=True)
             theme.inject_global_css(header_col)
 
-            headline = display_df.iloc[0].get("headline", "헤드라인이 없습니다.") if not display_df.empty else "헤드라인이 없습니다."
+            headline = df.iloc[0].get("headline", "헤드라인이 없습니다.")
             st.markdown(f"<h3 style='color: {header_col};'>헤드라인: {headline}</h3>", unsafe_allow_html=True)
             st.markdown(f"<p style='color: {header_col};'>현재 날씨: {weather_text}</p>", unsafe_allow_html=True)
             st.markdown("---")
 
             display_rows = []
-            for idx, item in enumerate(display_df.to_dict(orient="records")):
-                title = item.get(title_col, "제목 없음") if title_col else "N/A"
+            for idx, item in enumerate(df.to_dict(orient="records")):
+                title = item.get(title_col, "제목 없음") if title_col else "제목 없음"
                 artist = item.get("artist_name", "N/A")
                 row = {
-                    "순위": f"**{start + idx + 1}**",
+                    "순위": f"**{idx + 1}**",
                     "커버": item.get("album_image_url", ""),
                     "제목": title,
                     "아티스트": artist,
-                    "YouTube 링크": f"https://www.youtube.com/results?search_query={urllib.parse.quote(artist)}%20{urllib.parse.quote(title)}",
+                    "YouTube 링크": f"https://www.youtube.com/results?search_query={urllib.parse.quote(artist)}+{urllib.parse.quote(title)}",
                     "Spotify 링크": f"https://open.spotify.com/search/{urllib.parse.quote(artist)}%20{urllib.parse.quote(title)}",
                 }
 
                 if item.get("track_url"):
-                    row["label"] = f'<a href="{item["track_url"]}" target="_blank" style="color: {link_col}">{title}</a>'
-                    row["아티스트"] = f'<a href="{item["track_url"]}" target="_blank" style="color: {link_col}">{artist}</a>'
+                    row["제목"] = f'<a href="{item["track_url"]}" target="_blank" style="color: {link_col};">{title}</a>'
+                    row["아티스트"] = f'<a href="{item["track_url"]}" target="_blank" style="color: {link_col};">{artist}</a>'
 
                 if item.get("listeners") is not None and pd.notna(item["listeners"]):
                     row["리스너 수"] = safe_format_int(item["listeners"])
@@ -155,11 +137,11 @@ def main():
                                 unsafe_allow_html=True,
                             )
                     elif h in link_headers:
-                        cols[i].link_button(h.replace(" ", ""), row[h])
+                        cols[i].link_button(h.replace(" 링크", ""), row[h])
                     else:
                         cols[i].markdown(row[h], unsafe_allow_html=True)
         else:
-            st.warning(f"'{selected_level1}'에 대한 차트 데이터를 불러올 수 없습니다.")
+            st.warning(f"'{selected_level1}'에 대한 차트 데이터를 불러오지 못했습니다.")
     else:
         st.warning("시/도 목록을 선택해주세요.")
 
