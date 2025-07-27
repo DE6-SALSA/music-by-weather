@@ -12,12 +12,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get Runner Public IP
-        id: ip
-        run: |
-          echo "runner_ip=$(curl -s https://api.ipify.org)" >> $GITHUB_ENV
-          echo "Runner IP: ${{ env.runner_ip }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -25,13 +19,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
-      - name: Authorize GitHub Actions IP
+      - name: Get GitHub Actions IPs
+        id: get-ips
         run: |
-          aws ec2 authorize-security-group-ingress \
-            --group-id sg-0356f1af62e37b738 \
-            --protocol tcp \
-            --port 22 \
-            --cidr 0.0.0.0/0
+          echo "Fetching GitHub Actions IP list..."
+          curl -s https://api.github.com/meta | jq -r '.actions[]' > actions_ips.txt
+          cat actions_ips.txt
+          
+      - name: Authorize GitHub Actions IPs
+        run: |
+          while read ip; do
+            echo "Adding IP: $ip"
+            aws ec2 authorize-security-group-ingress \
+              --group-id sg-0356f1af62e37b738 \
+              --protocol tcp \
+              --port 22 \
+              --cidr $ip || true
+          done < actions_ips.txt
 
       - name: Set up SSH key
         run: |
@@ -122,12 +126,14 @@ jobs:
             fi
           EOF
 
-      - name: Remove IP
+      - name: Remove GitHub Actions IPs
         if: always()
         run: |
-          echo "🧹 Removing IP ${{ env.runner_ip }}"
-          aws ec2 revoke-security-group-ingress \
-            --group-id sg-0356f1af62e37b738 \
-            --protocol tcp \
-            --port 22 \
-            --cidr 0.0.0.0/0
+          while read ip; do
+            echo "Removing IP: $ip"
+            aws ec2 revoke-security-group-ingress \
+              --group-id sg-0356f1af62e37b738 \
+              --protocol tcp \
+              --port 22 \
+              --cidr $ip || true
+          done < actions_ips.txt
