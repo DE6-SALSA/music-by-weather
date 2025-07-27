@@ -2,7 +2,11 @@ import asyncio
 from typing import List, Dict, Optional, Union
 from fastapi import APIRouter, HTTPException, Query
 from db import get_redshift_connection_internal
-from services import get_current_weather_from_redshift_internal, get_music_data_from_redshift_internal
+from services import (
+    get_current_weather_from_redshift_internal,
+    get_music_data_from_redshift_internal,
+    get_lastfm_track_info
+)
 
 router = APIRouter()
 
