@@ -139,7 +139,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
         query = """
             SELECT region, weather, track_name, album_title, artist_name, album_image_url, album_url, track_url,
                 listeners, playcount, headline, run_time, similarity_to_headline
-            FROM raw_data.weather_music
+            FROM analytics_data.weather_music
             WHERE region = %s
             ORDER BY similarity_to_headline DESC
             LIMIT %s;
@@ -180,7 +180,7 @@ async def get_level1_list():
     try:
         conn = get_redshift_connection_internal()
         cursor = conn.cursor()
-        query = "SELECT DISTINCT region FROM raw_data.weather_music ORDER BY region;"
+        query = "SELECT DISTINCT region FROM analytics_data.weather_music ORDER BY region;"
         cursor.execute(query)
         results = cursor.fetchall()
         level1_list = [row[0] for row in results]
