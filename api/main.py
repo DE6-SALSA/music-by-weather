@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .db import test_redshift_connection
-from .routers import router
+from db import test_redshift_connection
+from routers import router
 
 app = FastAPI(
     title="Music & Weather Recommendation API",
