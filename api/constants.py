@@ -1,7 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 REDSHIFT_CONFIG = {
     "host": os.environ.get("REDSHIFT_HOST"),
