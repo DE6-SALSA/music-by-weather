@@ -82,9 +82,7 @@ async def get_chart_rank(limit: int = 100):
         columns = [desc[0] for desc in cur.description]
         
         lastfm_tasks = []
-        
-        from .services import get_lastfm_track_info # Import here to avoid circular dependency if router imports service and service imports router
-
+    
         for i, record in enumerate(music_records):
             music_dict = dict(zip(columns, record))
             combined_tags = [
