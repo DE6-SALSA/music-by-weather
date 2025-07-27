@@ -63,9 +63,11 @@ def main():
             df = pd.DataFrame(chart_data)
             df.columns = [col.lower() for col in df.columns]
 
-            if "run_time" in df.columns:
-                df["run_time"] = pd.to_datetime(df["run_time"], errors="coerce")
-                df = df.sort_values("run_time", ascending=False)
+            if all(c in df.columns for c in ["track_name", "artist_name"]):
+                df = df.drop_duplicates(subset=["track_name", "artist_name"], keep="first")
+
+            if "similarity_to_headline" in df.columns:
+                df = df.sort_values("similarity_to_headline", ascending=False) # 유사도 높은 순으로 정렬
 
             if all(c in df.columns for c in ["track_name", "artist_name"]):
                 df = df.drop_duplicates(subset=["track_name", "artist_name"], keep="first")
