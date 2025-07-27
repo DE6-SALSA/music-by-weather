@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME', '/opt/airflow'), 'etl'))
 
-from etl.slack_alert import slack_alert
 from track_etl import (
     extract_tracks,
     enrich_with_tags,
