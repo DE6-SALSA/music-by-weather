@@ -17,8 +17,7 @@ default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=1),
-    'on_failure_callback' : slack_alert,
+    'retry_delay': timedelta(minutes=1)
 }
 
 with DAG(
