@@ -141,7 +141,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
                 listeners, playcount, headline, run_time
             FROM raw_data.weather_music
             WHERE region = %s
-            ORDER BY run_time DESC
+            ORDER BY similarity_to_headline DESC
             LIMIT %s;
         """
         print(f"[DEBUG] Executing simple lyrics chart query for level1={level1}: {query}")
