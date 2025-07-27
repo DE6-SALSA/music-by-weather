@@ -29,7 +29,7 @@ def get_level1_list():
 
 def get_lyrics_chart(level1: str, limit: int = 100):
     try:
-        url = f"{API_BASE_URL}/charts/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
+        url = f"{API_BASE_URL}/chart/lyrics_simple?level1={urllib.parse.quote(level1)}&limit={limit}"
         res = requests.get(url)
         res.raise_for_status()
         return res.json()
