@@ -3,7 +3,7 @@ import sys
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-
+from etl.slack_alert import slack_alert
 sys.path.insert(0, os.path.join(os.getenv('AIRFLOW_HOME', '/opt/airflow'), 'etl'))
 
 from track_etl import (
@@ -18,6 +18,7 @@ default_args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=1),
+    'on_failure_callback' : slack_alert,
 }
 
 with DAG(
