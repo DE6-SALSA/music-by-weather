@@ -107,6 +107,9 @@ def main():
                 if item.get("playcount") is not None and pd.notna(item["playcount"]):
                     row["재생 수"] = safe_format_int(item["playcount"])
 
+                if item.get("similarity_to_headline") is not None:
+                    row["유사도"] = f"{item['similarity_to_headline'] * 100:.3f}%"
+
                 display_rows.append(row)
 
             display_df = pd.DataFrame(display_rows)
@@ -118,6 +121,8 @@ def main():
             if "재생 수" in display_df.columns:
                 optional_headers.append("재생 수")
             link_headers = ["YouTube 링크", "Spotify 링크"]
+            if "유사도" in display_df.columns:
+                optional_headers.append("유사도")
 
             headers = base_headers + optional_headers + link_headers
             widths = [0.5, 1, 2, 1.5] + [1] * len(optional_headers) + [1, 1]
@@ -147,4 +152,5 @@ def main():
         st.warning("시/도 목록을 선택해주세요.")
 
 if __name__ == "__main__":
+
     main()
