@@ -1,26 +1,20 @@
 from typing import Dict, List, Optional
 
 def collect_tags(row: Dict) -> List[str]:
-    """
-    데이터 행에서 비어 있지 않은 태그를 수집.
-    """
     return [
         row[f"tag{i}"] for i in range(1, 6)
         if row.get(f"tag{i}") and row[f"tag{i}"].strip()
     ]
 
-def build_postgres_query(
+def build_redshift_query(
     weather_condition: Optional[str] = None,
     tags: Optional[List[str]] = None,
     search_query: Optional[str] = None,
     limit: int = 10,
     randomize: bool = False
 ) -> str:
-    """
-    PostgreSQL 쿼리 빌더: 날씨 조건, 태그, 검색어 기반 쿼리 생성.
-    """
     select_clause = "artist, title, play_cnt, listener_cnt, tag1, tag2, tag3, tag4, tag5"
-    base_query = f"SELECT {select_clause} FROM raw_data.top_tag5"  # Changed from analytics_data.top_tag5
+    base_query = f"SELECT {select_clause} FROM raw_data.top_tag5"
     conditions = []
 
     if tags:
