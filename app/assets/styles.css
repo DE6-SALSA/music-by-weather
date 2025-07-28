@@ -1,0 +1,335 @@
+/* styles.css */
+
+/* General Body and Layout */
+body {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #cdd9e4; 
+    color: #2f4f4f; 
+}
+
+.stApp {
+    background-color: #cdd9e4; 
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+}
+
+/* Page Title and Subtitle */
+h1 {
+    text-align: center;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 3em;
+    font-weight: bold;
+    background: linear-gradient(45deg, #1c4e80, #ff69b4);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 10px;
+}
+
+p {
+    text-align: center;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    color: #465c6b;
+    font-size: 1.1em;
+    margin-bottom: 30px;
+}
+
+/* Headers (subheader는 이제 박스 외부에 위치) */
+h2, h3 {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    color: #2f4f4f;
+    margin-top: 20px; 
+    margin-bottom: 10px;
+    padding-top: 0;
+}
+
+h2 {
+    font-size: 1.8em;
+    border-bottom: 2px solid #aebac4;
+    padding-bottom: 5px;
+}
+
+h3 {
+    font-size: 1.4em;
+}
+
+/* Horizontal Rule */
+hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0));
+    margin: 40px 0;
+}
+
+/* 날씨 정보 박스의 내부 컨테이너 */
+.weather-content {
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
+    flex-grow: 1; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-top: 0px;
+    height: 100%; 
+}
+
+/* Specific Weather Box Styling (weather-content 내부 스타일) */
+.weather-display {
+    display: flex;
+    flex-direction: column; /* 세로 배치로 변경 */
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* 이미지와 온도 사이 간격 줄임 */
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.weather-icon {
+    width: 120px; /* GIF 크기 증가 */
+    height: 120px;
+    display: block;
+}
+
+.temperature {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #333333;
+}
+
+.weather-description {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #444444;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.weather-detail {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 0.95em;
+    color: #555555;
+    margin-bottom: 3px;
+    text-align: center;
+}
+
+/* music-card의 전체적인 레이아웃 및 스타일 */
+.music-card {
+    border: 1px solid #c0c0c0;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 15px;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    background-color: #f0f4f7;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    min-height: 380px;
+    height: auto;
+}
+
+/* 이미지와 No Image 플레이스홀더를 감쌀 컨테이너 */
+.music-card .image-wrapper {
+    width: 100%;
+    padding-top: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+/* 음악 이미지 스타일 - image-wrapper 내부에 위치 */
+.music-card .image-wrapper .music-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
+    display: block;
+}
+
+/* 이미지가 없을 때 표시되는 플레이스홀더 스타일 - image-wrapper 내부에 위치 */
+.music-card .image-wrapper .no-image-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    color: #DDDDDD;
+    font-size: 1.2em;
+    font-weight: bold;
+    border-radius: 5px;
+    text-align: center;
+}
+
+/* 음악 정보 (가수, 제목)를 담는 박스 스타일 */
+.music-info-box {
+    margin-bottom: 5px;
+    padding: 5px;
+    border: 1px solid #d0d9e0;
+    border-radius: 5px;
+    background-color: #e6eef3;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+.artist-name {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333333;
+    margin: 0;
+}
+
+.track-title {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 0.95em;
+    font-style: italic;
+    color: #555555;
+    margin: 0;
+}
+
+/* 링크를 담는 개별 박스 스타일 */
+.music-link-box {
+    margin-bottom: 5px;
+    padding: 5px;
+    border: 1px solid #d0d9e0;
+    border-radius: 5px;
+    background-color: #e0e7ed;
+    text-align: center;
+    min-height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.music-link-box a {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    text-decoration: none;
+    color: #0056b3;
+    font-weight: bold;
+    font-size: 0.9em;
+    display: block;
+    width: 100%;
+}
+
+.music-link-box a:hover {
+    text-decoration: underline;
+    color: #003f80;
+}
+
+.link-placeholder {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 0.8em;
+    color: #777777;
+    display: block;
+    width: 100%;
+}
+
+/* 태그를 담는 박스 스타일 */
+.music-tags-box {
+    margin-top: auto;
+    padding: 5px 8px;
+    border: 1px solid #d0d9e0;
+    border-radius: 5px;
+    background-color: #d9e2e9;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+
+.tags-text {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 0.8em;
+    color: #555555;
+    margin: 0;
+    line-height: 1.4;
+    word-wrap: normal;
+    flex-shrink: 0;
+    padding-right: 5px;
+}
+
+/* Streamlit 버튼 */
+.stButton > button {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    font-size: 0.9em;
+    padding: 8px 15px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: rgb(0, 0, 0);
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+    margin-left: 10px;
+}
+
+.stButton > button:hover {
+    background-color: transparent;
+}
+
+/* Streamlit 입력창 */
+.stTextInput > div > div > input {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    border-radius: 5px;
+    border: 1px solid #cccccc;
+    padding: 10px;
+    color: #333333;
+}
+
+/* Streamlit 셀렉트박스 */
+.stSelectbox > div > div > div > div {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    background: transparent !important;
+    border-radius: none;
+    border: none;
+    padding: 0;
+}
+
+/* Info and Warning messages */
+.stAlert {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.stAlert.info {
+    background-color: #d6eaf8;
+    color: #1a73e8;
+    border-color: #2196f3;
+}
+
+.stAlert.warning {
+    background-color: #ffe0b2;
+    color: #e65100;
+    border-color: #ff9800;
+}
+
+/* 데이터프레임 스타일 */
+.dataframe, .dataframe th, .dataframe td {
+    font-family: 'Comic Sans MS', 'Segoe UI Emoji', 'Arial', sans-serif;
+    color: black;
+}
