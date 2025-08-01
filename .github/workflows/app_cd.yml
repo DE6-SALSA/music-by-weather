@@ -23,6 +23,7 @@ jobs:
           chmod 600 ~/.ssh/ec2_key.pem
           ssh-keyscan -H ${{ secrets.PUBLIC_EC2_HOST }} >> ~/.ssh/known_hosts
 
+
       - name: Detect changed folders
         id: detect
         run: |
