@@ -1,0 +1,41 @@
+name: Add and Remove GitHub Actions IP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  manage-ip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Runner Public IP
+        id: ip
+        run: |
+          echo "runner_ip=$(curl -s https://api.ipify.org)" >> $GITHUB_ENV
+          echo "Runner IP: ${{ env.runner_ip }}"
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Authorize GitHub Actions IP
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.runner_ip }}/32
+
+      - name: Wait and Remove IP
+        if: always()
+        run: |
+          echo "⏳ 1분 대기 후 IP 삭제"
+          sleep 60
+          aws ec2 revoke-security-group-ingress \
+            --group-id sg-0356f1af62e37b738 \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ env.runner_ip }}/32
