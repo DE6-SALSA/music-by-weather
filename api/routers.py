@@ -1,7 +1,7 @@
 import asyncio
 from typing import List, Dict, Optional, Union
 from fastapi import APIRouter, HTTPException, Query
-from db import get_redshift_connection_internal
+from db import get_redshift_connection_internal, release_connection
 from services import (
     get_current_weather_from_redshift_internal,
     get_music_data_from_redshift_internal,
@@ -119,7 +119,7 @@ async def get_chart_rank(limit: int = 100):
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            release_connection(conn)
     
     if not music_rank_data:
         print(f"[DEBUG] No chart rank data found")
@@ -165,7 +165,7 @@ async def get_lyrics_chart_simple(level1: str = Query(..., description="시/도 
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            release_connection(conn)
 
     if not music_data:
         print(f"[DEBUG] No simple lyrics chart data found for level1={level1}")
@@ -192,7 +192,7 @@ async def get_level1_list():
         raise HTTPException(status_code=500, detail=f"Redshift에서 level1 목록 조회 오류: {e}")
     finally:
         if conn:
-            conn.close()
+            release_connection(conn)
     return level1_list
 
 @router.get("/locations/level2", response_model=List[str])
@@ -214,5 +214,5 @@ async def get_level2_list(level1_name: str = Query(..., description="조회할 l
         raise HTTPException(status_code=500, detail=f"Redshift에서 level2 목록 조회 오류: {e}")
     finally:
         if conn:
-            conn.close()
+            release_connection(conn)
     return level2_list
