@@ -3,6 +3,7 @@ import requests
 import re
 import logging
 import os
+import concurrent.futures
 
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
@@ -29,77 +30,97 @@ def weather_condition(pty, t1h, wsd, sky):
         return 'Cloudy'
     return 'Clear'
 
-def fetch_weather_data(csv_path: str, service_key: str, **kwargs):
-    print (os.getcwd())
+def _fetch_single_region(row_data: dict, service_key: str, base_date: str, base_time: str) -> dict | None:
+    """단일 지역 날씨 조회 — ThreadPoolExecutor 워커에서 호출"""
+    level1 = row_data['level1']
+    level2 = row_data['level2']
+    nx, ny = row_data['nx'], row_data['ny']
 
+    params = {
+        "authKey": service_key,
+        "numOfRows": 100,
+        "pageNo": 1,
+        "dataType": "JSON",
+        "base_date": base_date,
+        "base_time": base_time,
+        "nx": nx,
+        "ny": ny
+    }
+    url = "https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getUltraSrtFcst?" + urlencode(params, safe="=")
+
+    try:
+        res = requests.get(url, timeout=10)
+        res.raise_for_status()
+        items = res.json()['response']['body']['items']['item']
+
+        data = {}
+        for item in items:
+            cat = item['category']
+            val = item['fcstValue']
+            if cat == "RN1":
+                if val in ["강수없음", "1mm 미만"]:
+                    val = "0"
+                else:
+                    val = re.sub(r"[^0-9.]", "", val)
+            data[cat] = val
+
+        return {
+            "LEVEL1": level1,
+            "LEVEL2": level2,
+            "DATE": datetime.strptime(base_date, "%Y%m%d").strftime("%Y-%m-%d"),
+            "TIME": base_time,
+            "PTY": int(data.get("PTY", -1)),
+            "REH": int(data.get("REH", -1)),
+            "RN1": float(data.get("RN1", -1)),
+            "T1H": float(data.get("T1H", -1)),
+            "WSD": float(data.get("WSD", -1)),
+            "SKY": int(data.get("SKY", -1)),
+        }
+    except Exception as e:
+        logging.warning(f"❌ {level1}_{level2} failed: {e}")
+        return None
+
+
+def fetch_weather_data(csv_path: str, service_key: str, **kwargs):
+    """
+    [BEFORE] 직렬 처리: ~250개 지역 × 0.5s ≒ 125s
+    [AFTER]  병렬 처리: ThreadPoolExecutor(max_workers=20) → ~8s
+    """
     def get_base_datetime():
         now = datetime.now(ZoneInfo("Asia/Seoul"))
-        #now = datetime.now()
         if now.minute < 45:
             now -= timedelta(hours=1)
         return now.strftime("%Y%m%d"), now.strftime("%H") + "30"
-    
 
     df = pd.read_csv(csv_path)
-    results = []
     base_date, base_time = get_base_datetime()
-    print(base_date, base_time)
-    logging.info("Fetching weather data from the API...")
+    logging.info(f"Fetching weather data (parallel) | base: {base_date} {base_time}")
 
-    for _, row in df.iterrows():
-        level1 = str(row['level1'])
-        level2 = str(row['level2']) if pd.notnull(row['level2']) else ""
-        nx, ny = int(row['nx']), int(row['ny'])
-
-        params = {
-            "serviceKey": service_key,
-            "numOfRows": 100,
-            "pageNo": 1,
-            "dataType": "JSON",
-            "base_date": base_date,
-            "base_time": base_time,
-            "nx": nx,
-            "ny": ny
+    # DataFrame rows를 dict 리스트로 변환
+    rows = [
+        {
+            "level1": str(r["level1"]),
+            "level2": str(r["level2"]) if pd.notnull(r["level2"]) else "",
+            "nx": int(r["nx"]),
+            "ny": int(r["ny"]),
         }
+        for _, r in df.iterrows()
+    ]
 
-        url = "http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst?" + urlencode(params, safe="=")
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {
+            executor.submit(_fetch_single_region, row, service_key, base_date, base_time): row
+            for row in rows
+        }
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result is not None:
+                results.append(result)
 
-        try:
-            res = requests.get(url, timeout=10)
-            res.raise_for_status()
-            items = res.json()['response']['body']['items']['item']
-            
-            data = {}
-            for item in items:
-                cat = item['category']
-                val = item['fcstValue']
-                if cat == "RN1" :
-                    if val in ["강수없음", '1mm 미만']:
-                        val = "0"
-                    else:
-                        val = re.sub(r"[^0-9.]", "", val)
-                data[cat] = val
-            
-            results.append({
-                "LEVEL1": level1,
-                "LEVEL2": level2,
-                "DATE": datetime.strptime(base_date, "%Y%m%d").strftime("%Y-%m-%d"),
-                "TIME": base_time,
-                "PTY": int(data.get("PTY", -1)),
-                "REH": int(data.get("REH", -1)),
-                "RN1": float(data.get("RN1", -1)),
-                "T1H": float(data.get("T1H", -1)),
-                "WSD": float(data.get("WSD", -1)),
-                "SKY": int(data.get("SKY", -1)),
-            })
-
-        except Exception as e:
-            logging.warning(f"❌ {level1}_{level2} failed: {e}")
-            print(f"❌ {level1}_{level2} 실패: {e}")
-            continue
+    logging.info(f"Fetched {len(results)}/{len(rows)} regions successfully")
 
     weather_df = pd.DataFrame(results)
-
     weather_df['weather_condition'] = weather_df.apply(
         lambda row: weather_condition(row['PTY'], row['T1H'], row['WSD'], row['SKY']),
         axis=1
