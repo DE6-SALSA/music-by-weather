@@ -2,7 +2,7 @@ import asyncio
 import httpx
 from typing import List, Dict, Optional, Union
 from fastapi import HTTPException
-from db import get_redshift_connection_internal
+from db import get_redshift_connection_internal, release_connection
 from constants import LASTFM_API_KEY, LASTFM_API_URL
 
 def get_current_weather_from_redshift_internal(level1: str, level2: str) -> Dict[str, Union[str, float, int]]:
@@ -52,67 +52,80 @@ def get_current_weather_from_redshift_internal(level1: str, level2: str) -> Dict
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            release_connection(conn)
     return weather_info
 
-def build_redshift_query(weather_condition: Optional[str] = None, tags: Optional[List[str]] = None, search_query: Optional[str] = None, limit: int = 10, randomize: bool = False) -> str:
+def build_redshift_query(
+    weather_condition: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    search_query: Optional[str] = None,
+    limit: int = 10,
+    randomize: bool = False
+) -> tuple:
+    """
+    SQL Injection 방지를 위해 parameterized query로 구성.
+    반환값: (sql_string, params_list)
+    호출부에서 cur.execute(sql, params) 형태로 사용.
+    """
     select_clause = "artist, title, play_cnt, listener_cnt, tag1, tag2, tag3, tag4, tag5"
     base_query = f"SELECT {select_clause} FROM analytics_data.top_tag5"
-    conditions = [] 
-    
+    conditions = []
+    params = []
+
+    # 사용자 입력 tags 필터 — 각 tag를 %s 플레이스홀더로 바인딩
     if tags:
         tag_conditions = []
         for tag in tags:
+            pattern = f"%{tag.lower()}%"
             tag_conditions.append(
-                f"(LOWER(tag1) LIKE '%{tag.lower()}%' OR LOWER(tag2) LIKE '%{tag.lower()}%' OR LOWER(tag3) LIKE '%{tag.lower()}%' OR LOWER(tag4) LIKE '%{tag.lower()}%' OR LOWER(tag5) LIKE '%{tag.lower()}%')"
+                "(LOWER(tag1) LIKE %s OR LOWER(tag2) LIKE %s OR LOWER(tag3) LIKE %s"
+                " OR LOWER(tag4) LIKE %s OR LOWER(tag5) LIKE %s)"
             )
+            params.extend([pattern] * 5)
         conditions.append("(" + " OR ".join(tag_conditions) + ")")
 
+    # 날씨 조건 — 내부 화이트리스트 맵을 통해 변환 후 %s 바인딩
     if weather_condition:
         weather_to_tags_map = {
-            "Clear": ["happy", "love", "summer", "sunny", "upbeat", "pop", "dance", "fun"],
-            "Cloudy": ["indie", "alternative", "mellow", "chill", "folk", "soft rock"],
-            "Rainy": ["sad song", "heartbreak", "ballad", "melancholic"],
-            "Stormy": ["metal", "hardcore", "emo", "punk", "aggressive"],
-            "Snowy": ["christmas", "winter", "dreamy", "ethereal"],
-            "Windy": ["jazz", "instrumental", "smooth", "airy", "ambient"],
-            "Hot": ["tropical house", "reggaeton", "latin pop", "dancehall"],
-            "Cold": ["dark pop", "coldwave", "gothic", "darkwave"]
+            "Clear":   ["happy", "love", "summer", "sunny", "upbeat", "pop", "dance", "fun"],
+            "Cloudy":  ["indie", "alternative", "mellow", "chill", "folk", "soft rock"],
+            "Rainy":   ["sad song", "heartbreak", "ballad", "melancholic"],
+            "Stormy":  ["metal", "hardcore", "emo", "punk", "aggressive"],
+            "Snowy":   ["christmas", "winter", "dreamy", "ethereal"],
+            "Windy":   ["jazz", "instrumental", "smooth", "airy", "ambient"],
+            "Hot":     ["tropical house", "reggaeton", "latin pop", "dancehall"],
+            "Cold":    ["dark pop", "coldwave", "gothic", "darkwave"],
         }
-        
         mapped_tags = weather_to_tags_map.get(weather_condition, [])
-        
         if mapped_tags:
             weather_tag_conditions = []
             for tag in mapped_tags:
+                pattern = f"%{tag.lower()}%"
                 weather_tag_conditions.append(
-                    f"(LOWER(tag1) LIKE '%{tag.lower()}%' OR LOWER(tag2) LIKE '%{tag.lower()}%' OR LOWER(tag3) LIKE '%{tag.lower()}%' OR LOWER(tag4) LIKE '%{tag.lower()}%' OR LOWER(tag5) LIKE '%{tag.lower()}%')"
+                    "(LOWER(tag1) LIKE %s OR LOWER(tag2) LIKE %s OR LOWER(tag3) LIKE %s"
+                    " OR LOWER(tag4) LIKE %s OR LOWER(tag5) LIKE %s)"
                 )
+                params.extend([pattern] * 5)
             conditions.append("(" + " OR ".join(weather_tag_conditions) + ")")
 
+    # 검색어 — 직접 입력값이므로 반드시 %s 바인딩
     if search_query:
-        search_pattern = f"%{search_query.lower()}%"
+        pattern = f"%{search_query.lower()}%"
         conditions.append(
-            f"""
-            (
-                LOWER(artist) LIKE '{search_pattern}' OR
-                LOWER(title) LIKE '{search_pattern}' OR
-                LOWER(tag1) LIKE '{search_pattern}' OR
-                LOWER(tag2) LIKE '{search_pattern}' OR
-                LOWER(tag3) LIKE '{search_pattern}' OR
-                LOWER(tag4) LIKE '{search_pattern}' OR
-                LOWER(tag5) LIKE '{search_pattern}'
-            )
-            """
+            "(LOWER(artist) LIKE %s OR LOWER(title) LIKE %s"
+            " OR LOWER(tag1) LIKE %s OR LOWER(tag2) LIKE %s OR LOWER(tag3) LIKE %s"
+            " OR LOWER(tag4) LIKE %s OR LOWER(tag5) LIKE %s)"
         )
+        params.extend([pattern] * 7)
 
     full_query = base_query
-    if conditions: 
+    if conditions:
         full_query += " WHERE " + " AND ".join(conditions)
-    
-    full_query += " ORDER BY " + ("RANDOM()" if randomize else "load_time DESC") + f" LIMIT {limit};"
-    
-    return full_query
+
+    full_query += " ORDER BY " + ("RANDOM()" if randomize else "load_time DESC") + " LIMIT %s"
+    params.append(limit)
+
+    return full_query, params
 
 async def get_music_data_from_redshift_internal(
     weather_condition: Optional[str] = None, 
@@ -129,11 +142,11 @@ async def get_music_data_from_redshift_internal(
         conn = get_redshift_connection_internal() 
         cur = conn.cursor()
 
-        full_query = build_redshift_query(weather_condition, tags, search_query, limit, randomize)
-        
+        full_query, query_params = build_redshift_query(weather_condition, tags, search_query, limit, randomize)
+
         print(f"\n[DEBUG] Executing music query: {full_query}")
-        
-        cur.execute(full_query) 
+
+        cur.execute(full_query, query_params)
         music_records = cur.fetchall()
 
         print(f"[DEBUG] Number of music records fetched: {len(music_records)}")
@@ -179,7 +192,7 @@ async def get_music_data_from_redshift_internal(
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            release_connection(conn)
     
     print(f"[DEBUG] Final music_data length: {len(music_data)}")
     return music_data
